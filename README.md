@@ -12,6 +12,10 @@ docker run --rm -p 8000:8000 \
 
 Open `http://localhost:8000`.
 
+![Stats — Light](screenshots/stats-light.png)
+
+![Stats — Dark](screenshots/stats-dark.png)
+
 ## Features
 
 - Queue overview — queued, in-progress, deferred, complete job counts
@@ -22,6 +26,10 @@ Open `http://localhost:8000`.
 - Job list with filtering by function, status, time range
 - Job detail with visual enqueue → start → finish timeline
 - Dark / light mode with system preference detection
+
+![Jobs List](screenshots/jobs-light.png)
+
+![Job Detail](screenshots/job-detail-dark.png)
 
 ## Configuration
 
