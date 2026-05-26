@@ -19,8 +19,6 @@ async def get_redis(redis_settings: RedisSettings) -> AsyncGenerator[ArqRedis, N
 
 
 def get_queue_name(
-    arq_queue_name: str | None = Header(
-        default=None, description="ARQ queue name"
-    ),
+    arq_queue_name: str | None = Header(default=None, description="ARQ queue name"),
 ) -> str:
     return arq_queue_name or default_queue_name

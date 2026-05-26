@@ -17,10 +17,22 @@ class FunctionPerf:
     function: str
     count: int
     success_count: int
+    failure_count: int
     avg_runtime_ms: float
     p50_runtime_ms: float
     p95_runtime_ms: float
     p99_runtime_ms: float
+
+
+@dataclass
+class JobRow:
+    job_id: str
+    function: str
+    status: str
+    success: bool
+    queue_name: str
+    enqueue_time: str
+    runtime_ms: float | None
 
 
 @dataclass
@@ -34,6 +46,7 @@ class DashboardData:
     jobs_last_5min: int = 0
     jobs_last_hour: int = 0
     functions: list[FunctionPerf] = field(default_factory=list)
+    jobs: list[JobRow] = field(default_factory=list)
     cached_at: str = ""
 
 
@@ -48,6 +61,12 @@ def _percentile(sorted_vals: list[float], p: float) -> float:
     return sorted_vals[f] * (c - k) + sorted_vals[c] * (k - f)
 
 
+def _fmt_time(dt: datetime | None) -> str:
+    if dt is None:
+        return "—"
+    return dt.strftime("%H:%M:%S")
+
+
 async def fetch_all_data() -> DashboardData:
     queue_name = default_queue_name
     queue = Queue(
@@ -59,7 +78,6 @@ async def fetch_all_data() -> DashboardData:
         cached_at=datetime.now(UTC).strftime("%H:%M:%S"),
     )
 
-    # Get all jobs for stats
     all_jobs = await queue.get_jobs()
     status_counts: dict[JobStatus, int] = {
         JobStatus.queued: 0,
@@ -76,6 +94,26 @@ async def fetch_all_data() -> DashboardData:
     data.deferred_jobs = status_counts[JobStatus.deferred]
     data.complete_jobs = status_counts[JobStatus.complete]
     data.not_found_jobs = status_counts[JobStatus.not_found]
+
+    # Build job rows
+    for job in all_jobs[:200]:
+        runtime_ms = None
+        if job.start_time and job.finish_time:
+            runtime_ms = (job.finish_time - job.start_time).total_seconds() * 1000
+
+        data.jobs.append(
+            JobRow(
+                job_id=job.job_id[:12],
+                function=job.function,
+                status=str(job.status.value)
+                if hasattr(job.status, "value")
+                else str(job.status),
+                success=job.success,
+                queue_name=job.queue_name or "—",
+                enqueue_time=_fmt_time(job.enqueue_time),
+                runtime_ms=runtime_ms,
+            )
+        )
 
     # Compute function stats from completed jobs
     completed = [j for j in all_jobs if j.status == JobStatus.complete]
@@ -100,6 +138,7 @@ async def fetch_all_data() -> DashboardData:
 
     for func_name, func_jobs in sorted(grouped.items()):
         success_count = sum(1 for j in func_jobs if j.success)
+        failure_count = len(func_jobs) - success_count
 
         runtimes_ms: list[float] = []
         for j in func_jobs:
@@ -121,6 +160,7 @@ async def fetch_all_data() -> DashboardData:
                 function=func_name,
                 count=len(func_jobs),
                 success_count=success_count,
+                failure_count=failure_count,
                 avg_runtime_ms=round(avg, 1),
                 p50_runtime_ms=round(p50, 1),
                 p95_runtime_ms=round(p95, 1),
@@ -129,3 +169,169 @@ async def fetch_all_data() -> DashboardData:
         )
 
     return data
+
+
+def mock_data() -> DashboardData:
+    """Return realistic mock data for screenshots."""
+    return DashboardData(
+        queued_jobs=12,
+        in_progress_jobs=7,
+        deferred_jobs=3,
+        complete_jobs=4821,
+        not_found_jobs=0,
+        throughput_per_min=14.12,
+        jobs_last_5min=73,
+        jobs_last_hour=847,
+        cached_at="19:42:15",
+        functions=[
+            FunctionPerf(
+                "send_notification", 2134, 2098, 36, 245.3, 180.0, 620.5, 1250.0
+            ),
+            FunctionPerf(
+                "process_payment", 1456, 1432, 24, 1823.7, 1540.0, 3800.0, 5200.0
+            ),
+            FunctionPerf(
+                "generate_report", 892, 871, 21, 12450.0, 10200.0, 24500.0, 38000.0
+            ),
+            FunctionPerf(
+                "sync_inventory", 339, 339, 0, 4560.0, 3800.0, 8900.0, 12000.0
+            ),
+        ],
+        jobs=[
+            JobRow(
+                "e7d3e8f5bb06",
+                "send_notification",
+                "complete",
+                True,
+                "arq:queue",
+                "19:41:52",
+                210.5,
+            ),
+            JobRow(
+                "a1604834e6df",
+                "process_payment",
+                "complete",
+                True,
+                "arq:queue",
+                "19:41:44",
+                1823.0,
+            ),
+            JobRow(
+                "9011598986d0",
+                "generate_report",
+                "in_progress",
+                False,
+                "arq:queue",
+                "19:41:38",
+                None,
+            ),
+            JobRow(
+                "ad8458b6dae9",
+                "send_notification",
+                "complete",
+                True,
+                "arq:queue",
+                "19:41:30",
+                180.2,
+            ),
+            JobRow(
+                "1d8b3ce0ab89",
+                "sync_inventory",
+                "complete",
+                True,
+                "arq:queue",
+                "19:41:22",
+                4320.0,
+            ),
+            JobRow(
+                "f3a2b1c0d9e8",
+                "process_payment",
+                "complete",
+                False,
+                "arq:queue",
+                "19:41:15",
+                5100.0,
+            ),
+            JobRow(
+                "b5c4d3e2f1a0",
+                "send_notification",
+                "complete",
+                True,
+                "arq:queue",
+                "19:41:08",
+                195.0,
+            ),
+            JobRow(
+                "c6d5e4f3a2b1",
+                "generate_report",
+                "complete",
+                True,
+                "arq:queue",
+                "19:41:00",
+                15200.0,
+            ),
+            JobRow(
+                "d7e6f5a4b3c2",
+                "send_notification",
+                "queued",
+                False,
+                "arq:queue",
+                "19:40:52",
+                None,
+            ),
+            JobRow(
+                "e8f7a6b5c4d3",
+                "sync_inventory",
+                "complete",
+                True,
+                "arq:queue",
+                "19:40:45",
+                3800.0,
+            ),
+            JobRow(
+                "f9a8b7c6d5e4",
+                "process_payment",
+                "complete",
+                True,
+                "arq:queue",
+                "19:40:38",
+                1450.0,
+            ),
+            JobRow(
+                "a0b9c8d7e6f5",
+                "send_notification",
+                "complete",
+                True,
+                "arq:queue",
+                "19:40:30",
+                230.0,
+            ),
+            JobRow(
+                "b1c0d9e8f7a6",
+                "generate_report",
+                "deferred",
+                False,
+                "arq:queue",
+                "19:40:22",
+                None,
+            ),
+            JobRow(
+                "c2d1e0f9a8b7",
+                "send_notification",
+                "complete",
+                True,
+                "arq:queue",
+                "19:40:15",
+                165.0,
+            ),
+            JobRow(
+                "d3e2f1a0b9c8",
+                "process_payment",
+                "in_progress",
+                False,
+                "arq:queue",
+                "19:40:08",
+                None,
+            ),
+        ],
+    )

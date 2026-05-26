@@ -38,11 +38,13 @@ def build_buckets(runtimes: list[float], num_buckets: int = 10) -> list[RuntimeB
     max_rt = max(runtimes)
 
     if min_rt == max_rt:
-        return [RuntimeBucket(
-            range_start_ms=min_rt,
-            range_end_ms=max_rt,
-            count=len(runtimes),
-        )]
+        return [
+            RuntimeBucket(
+                range_start_ms=min_rt,
+                range_end_ms=max_rt,
+                count=len(runtimes),
+            )
+        ]
 
     step = (max_rt - min_rt) / num_buckets
     buckets: list[RuntimeBucket] = []
@@ -54,11 +56,13 @@ def build_buckets(runtimes: list[float], num_buckets: int = 10) -> list[RuntimeB
             count = sum(1 for r in runtimes if start <= r < end)
         else:
             count = sum(1 for r in runtimes if start <= r <= end)
-        buckets.append(RuntimeBucket(
-            range_start_ms=round(start, 1),
-            range_end_ms=round(end, 1),
-            count=count,
-        ))
+        buckets.append(
+            RuntimeBucket(
+                range_start_ms=round(start, 1),
+                range_end_ms=round(end, 1),
+                count=count,
+            )
+        )
 
     return buckets
 
@@ -96,19 +100,21 @@ async def _get_function_stats(queue_name: str) -> FunctionStatsResponse:
         else:
             avg = p50 = p95 = p99 = min_rt = max_rt = 0.0
 
-        functions.append(FunctionRuntime(
-            function=func_name,
-            count=len(func_jobs),
-            success_count=success_count,
-            failure_count=failure_count,
-            avg_runtime_ms=round(avg, 1),
-            p50_runtime_ms=round(p50, 1),
-            p95_runtime_ms=round(p95, 1),
-            p99_runtime_ms=round(p99, 1),
-            min_runtime_ms=round(min_rt, 1),
-            max_runtime_ms=round(max_rt, 1),
-            runtime_buckets=build_buckets(runtimes_ms),
-        ))
+        functions.append(
+            FunctionRuntime(
+                function=func_name,
+                count=len(func_jobs),
+                success_count=success_count,
+                failure_count=failure_count,
+                avg_runtime_ms=round(avg, 1),
+                p50_runtime_ms=round(p50, 1),
+                p95_runtime_ms=round(p95, 1),
+                p99_runtime_ms=round(p99, 1),
+                min_runtime_ms=round(min_rt, 1),
+                max_runtime_ms=round(max_rt, 1),
+                runtime_buckets=build_buckets(runtimes_ms),
+            )
+        )
 
     # Compute throughput
     now = datetime.now(UTC)
@@ -116,12 +122,10 @@ async def _get_function_stats(queue_name: str) -> FunctionStatsResponse:
     five_min_ago = now - timedelta(minutes=5)
 
     jobs_last_hour = sum(
-        1 for job in jobs
-        if job.finish_time and job.finish_time >= hour_ago
+        1 for job in jobs if job.finish_time and job.finish_time >= hour_ago
     )
     jobs_last_5min = sum(
-        1 for job in jobs
-        if job.finish_time and job.finish_time >= five_min_ago
+        1 for job in jobs if job.finish_time and job.finish_time >= five_min_ago
     )
     throughput_per_min = round(jobs_last_hour / 60, 2) if jobs_last_hour else 0.0
 

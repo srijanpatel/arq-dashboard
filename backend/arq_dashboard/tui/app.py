@@ -2,14 +2,21 @@ import contextlib
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Horizontal, ScrollableContainer
 from textual.design import ColorSystem
 from textual.timer import Timer
-from textual.widgets import DataTable, Footer, Header, Label, Static
+from textual.widgets import (
+    DataTable,
+    Footer,
+    Header,
+    Label,
+    Static,
+    TabbedContent,
+    TabPane,
+)
 
 from arq_dashboard.tui.data import DashboardData, fetch_all_data
 
-# Warm earth-tone palette matching the web UI
 WARM_DARK = ColorSystem(
     primary="#E09050",
     secondary="#A69B90",
@@ -41,48 +48,71 @@ def _slugify(s: str) -> str:
     return s.lower().replace(" ", "-")
 
 
-class QueueCard(Static):
-    """Single stat card."""
+def _fmt_ms(ms: float) -> str:
+    if ms == 0:
+        return "—"
+    if ms < 1000:
+        return f"{int(ms)}ms"
+    if ms < 60000:
+        return f"{ms / 1000:.1f}s"
+    return f"{ms / 60000:.1f}m"
 
-    def __init__(self, label: str, value: int = 0, style_class: str = ""):
+
+def _bar(fraction: float, width: int = 15) -> str:
+    """Render a text-based progress bar."""
+    filled = int(fraction * width)
+    return "█" * filled + "░" * (width - filled)
+
+
+class StatRow(Static):
+    """Compact horizontal row of stat values."""
+
+    DEFAULT_CSS = """
+    StatRow {
+        height: 3;
+        margin: 0 1;
+        padding: 0 1;
+    }
+    StatRow Horizontal {
+        height: auto;
+    }
+    StatRow .stat-item {
+        width: 1fr;
+        height: 3;
+        content-align: center middle;
+        text-align: center;
+    }
+    StatRow .stat-val {
+        text-style: bold;
+        width: 100%;
+        text-align: center;
+    }
+    StatRow .stat-lbl {
+        width: 100%;
+        text-align: center;
+        color: $text-muted;
+    }
+    """
+
+    def __init__(self, items: list[tuple[str, str, str]]):
+        """items: list of (id_suffix, value, label)"""
         super().__init__()
-        self._label = label
-        self._slug = _slugify(label)
-        self._value = value
-        if style_class:
-            self.add_class(style_class)
+        self._items = items
 
     def compose(self) -> ComposeResult:
-        yield Label(str(self._value), id=f"val-{self._slug}", classes="card-value")
-        yield Label(self._label, classes="card-label")
+        with Horizontal():
+            for id_suffix, value, label in self._items:
+                with Static(classes="stat-item"):
+                    yield Label(
+                        value,
+                        id=f"sv-{id_suffix}",
+                        classes="stat-val",
+                    )
+                    yield Label(label, classes="stat-lbl")
 
-    def update_value(self, value: int):
-        self._value = value
+    def update_item(self, id_suffix: str, value: str):
         with contextlib.suppress(Exception):
-            self.query_one(f"#val-{self._slug}", Label).update(str(value))
-
-
-class ThroughputCard(Static):
-    """Throughput stat."""
-
-    def __init__(self, label: str, value: str = "0", unit: str = ""):
-        super().__init__()
-        self._label = label
-        self._value = value
-        self._unit = unit
-        self._id_safe = label.replace(" ", "-").lower()
-
-    def compose(self) -> ComposeResult:
-        yield Label(self._value, id=f"tp-{self._id_safe}", classes="card-value")
-        yield Label(
-            f"{self._unit}" if self._unit else self._label,
-            classes="card-label",
-        )
-
-    def update_value(self, value: str):
-        self._value = value
-        with contextlib.suppress(Exception):
-            self.query_one(f"#tp-{self._id_safe}", Label).update(value)
+            self.query_one(f"#sv-{id_suffix}", Label).update(value)
 
 
 class ArqDashboardTUI(App):
@@ -91,65 +121,12 @@ class ArqDashboardTUI(App):
         background: $surface;
     }
 
-    #overview {
-        height: auto;
-        margin: 1 2;
-    }
-
-    #overview Horizontal {
-        height: auto;
-    }
-
-    QueueCard {
-        width: 1fr;
-        height: 5;
-        border: solid $primary-background;
-        padding: 0 2;
+    TabbedContent {
         margin: 0 1;
-        content-align: center middle;
     }
 
-    QueueCard.queued { border: solid #8C7E72; }
-    QueueCard.deferred { border: solid #5A9FD4; }
-    QueueCard.in-progress { border: solid $primary; }
-    QueueCard.complete { border: solid $success; }
-    QueueCard.not-found { border: solid $warning; }
-
-    .card-value {
-        text-style: bold;
-        width: 100%;
-        text-align: center;
-        color: $text;
-    }
-
-    .card-label {
-        width: 100%;
-        text-align: center;
-        color: $text-muted;
-    }
-
-    #throughput {
-        height: auto;
-        margin: 1 2;
-    }
-
-    ThroughputCard {
-        width: 1fr;
-        height: 5;
-        border: solid $accent;
-        padding: 0 2;
-        margin: 0 1;
-        content-align: center middle;
-    }
-
-    #functions-section {
-        margin: 1 2;
-        height: 1fr;
-    }
-
-    #functions-section Label {
-        margin: 0 0 1 0;
-        text-style: bold;
+    #stats-pane, #jobs-pane {
+        padding: 0;
     }
 
     DataTable {
@@ -161,63 +138,112 @@ class ArqDashboardTUI(App):
         dock: bottom;
         background: $primary-background;
         padding: 0 2;
+        color: $text-muted;
+    }
+
+    .section-title {
+        margin: 1 1 0 1;
+        text-style: bold;
+        color: $accent;
     }
     """
 
     BINDINGS = [
         Binding("r", "refresh", "Refresh"),
-        Binding("d", "toggle_dark", "Toggle Dark/Light"),
+        Binding("d", "toggle_dark", "Dark/Light"),
+        Binding("1", "tab_stats", "Stats", show=False),
+        Binding("2", "tab_jobs", "Jobs", show=False),
         Binding("q", "quit", "Quit"),
     ]
 
     TITLE = "ARQ Dashboard"
 
-    def __init__(self):
+    def __init__(self, data_fetcher=None):
         super().__init__()
         self._refresh_timer: Timer | None = None
         self._data: DashboardData | None = None
+        self._data_fetcher = data_fetcher or fetch_all_data
         self.design = {"dark": WARM_DARK, "light": WARM_LIGHT}
 
     def compose(self) -> ComposeResult:
         yield Header()
 
-        with Container(id="overview"), Horizontal():
-            yield QueueCard("Queued", style_class="queued")
-            yield QueueCard("Deferred", style_class="deferred")
-            yield QueueCard("In Progress", style_class="in-progress")
-            yield QueueCard("Complete", style_class="complete")
-            yield QueueCard("Not Found", style_class="not-found")
+        with TabbedContent("Stats", "Jobs"):
+            with TabPane("Stats", id="stats-pane"), ScrollableContainer():
+                yield Label(" Queue Overview", classes="section-title")
+                yield StatRow(
+                    [
+                        ("queued", "0", "Queued"),
+                        ("deferred", "0", "Deferred"),
+                        ("in-progress", "0", "In Progress"),
+                        ("complete", "0", "Complete"),
+                        ("not-found", "0", "Not Found"),
+                    ]
+                )
+                yield Label(" Throughput", classes="section-title")
+                yield StatRow(
+                    [
+                        ("tpm", "—", "jobs/min"),
+                        ("t5m", "—", "last 5 min"),
+                        ("t1h", "—", "last hour"),
+                    ]
+                )
+                yield Label(" Function Performance", classes="section-title")
+                yield DataTable(id="fn-table")
 
-        with Container(id="throughput"), Horizontal():
-            yield ThroughputCard("Throughput", "—", "jobs/min")
-            yield ThroughputCard("Last 5min", "—", "completed")
-            yield ThroughputCard("Last Hour", "—", "completed")
-
-        with Vertical(id="functions-section"):
-            yield Label("Function Performance")
-            yield DataTable(id="fn-table")
+            with TabPane("Jobs", id="jobs-pane"):
+                yield DataTable(id="jobs-table")
 
         yield Label("Loading...", id="status-bar")
         yield Footer()
 
     async def on_mount(self):
-        table = self.query_one("#fn-table", DataTable)
-        table.add_columns(
-            "Function", "Calls", "Success%", "Avg", "p50", "p95", "p99"
+        # Function performance table
+        fn_table = self.query_one("#fn-table", DataTable)
+        fn_table.add_columns(
+            "Function",
+            "Calls",
+            "Success",
+            "Rate",
+            "Avg",
+            "p50",
+            "p95",
+            "p99",
         )
-        table.cursor_type = "row"
+        fn_table.cursor_type = "row"
+
+        # Jobs table
+        jobs_table = self.query_one("#jobs-table", DataTable)
+        jobs_table.add_columns(
+            "Job ID",
+            "Function",
+            "Status",
+            "Success",
+            "Queue",
+            "Enqueued",
+            "Runtime",
+        )
+        jobs_table.cursor_type = "row"
 
         await self.action_refresh()
         self._refresh_timer = self.set_interval(15, self.action_refresh)
 
+    def action_tab_stats(self):
+        with contextlib.suppress(Exception):
+            self.query_one(TabbedContent).active = "stats-pane"
+
+    def action_tab_jobs(self):
+        with contextlib.suppress(Exception):
+            self.query_one(TabbedContent).active = "jobs-pane"
+
     async def action_refresh(self):
-        self._update_status("Refreshing...")
+        self._update_status("⟳ Refreshing...")
         try:
-            self._data = await fetch_all_data()
+            self._data = await self._data_fetcher()
             self._render_data()
             self._update_status(
-                f"Last updated: {self._data.cached_at}  •  "
-                f"Press [bold]r[/bold] to refresh"
+                f"Updated {self._data.cached_at}  •  "
+                f"r=refresh  d=theme  1=stats  2=jobs  q=quit"
             )
         except Exception as e:
             self._update_status(f"Error: {e}")
@@ -225,55 +251,54 @@ class ArqDashboardTUI(App):
     def _render_data(self):
         if not self._data:
             return
-
         d = self._data
 
-        # Update queue cards
-        cards = self.query(QueueCard)
-        values = [
-            d.queued_jobs,
-            d.deferred_jobs,
-            d.in_progress_jobs,
-            d.complete_jobs,
-            d.not_found_jobs,
-        ]
-        for card, val in zip(cards, values, strict=False):
-            card.update_value(val)
+        # Queue overview
+        overview = self.query(StatRow).first()
+        if overview:
+            overview.update_item("queued", str(d.queued_jobs))
+            overview.update_item("deferred", str(d.deferred_jobs))
+            overview.update_item("in-progress", str(d.in_progress_jobs))
+            overview.update_item("complete", str(d.complete_jobs))
+            overview.update_item("not-found", str(d.not_found_jobs))
 
-        # Update throughput
-        tp_cards = list(self.query(ThroughputCard))
-        if len(tp_cards) >= 3:
-            tp_cards[0].update_value(str(d.throughput_per_min))
-            tp_cards[1].update_value(str(d.jobs_last_5min))
-            tp_cards[2].update_value(str(d.jobs_last_hour))
+        # Throughput
+        tp_row = list(self.query(StatRow))
+        if len(tp_row) >= 2:
+            tp_row[1].update_item("tpm", str(d.throughput_per_min))
+            tp_row[1].update_item("t5m", str(d.jobs_last_5min))
+            tp_row[1].update_item("t1h", str(d.jobs_last_hour))
 
-        # Update function table
-        table = self.query_one("#fn-table", DataTable)
-        table.clear()
+        # Function table
+        fn_table = self.query_one("#fn-table", DataTable)
+        fn_table.clear()
         for fn in d.functions:
-            rate = (
-                f"{fn.success_count / fn.count * 100:.1f}%"
-                if fn.count > 0
-                else "—"
-            )
-            table.add_row(
+            rate = fn.success_count / fn.count if fn.count > 0 else 0
+            fn_table.add_row(
                 fn.function,
                 str(fn.count),
-                rate,
-                self._fmt_ms(fn.avg_runtime_ms),
-                self._fmt_ms(fn.p50_runtime_ms),
-                self._fmt_ms(fn.p95_runtime_ms),
-                self._fmt_ms(fn.p99_runtime_ms),
+                f"{fn.success_count}/{fn.count}",
+                f"{_bar(rate)} {rate * 100:.0f}%",
+                _fmt_ms(fn.avg_runtime_ms),
+                _fmt_ms(fn.p50_runtime_ms),
+                _fmt_ms(fn.p95_runtime_ms),
+                _fmt_ms(fn.p99_runtime_ms),
             )
 
-    def _fmt_ms(self, ms: float) -> str:
-        if ms == 0:
-            return "—"
-        if ms < 1000:
-            return f"{int(ms)}ms"
-        if ms < 60000:
-            return f"{ms / 1000:.1f}s"
-        return f"{ms / 60000:.1f}m"
+        # Jobs table
+        jobs_table = self.query_one("#jobs-table", DataTable)
+        jobs_table.clear()
+        for job in d.jobs:
+            runtime = _fmt_ms(job.runtime_ms) if job.runtime_ms else "—"
+            jobs_table.add_row(
+                job.job_id,
+                job.function,
+                job.status,
+                "✓" if job.success else "✗",
+                job.queue_name,
+                job.enqueue_time,
+                runtime,
+            )
 
     def _update_status(self, text: str):
         with contextlib.suppress(Exception):

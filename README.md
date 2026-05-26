@@ -40,7 +40,9 @@ docker run --rm -it \
 
 ### Terminal UI
 
-![TUI](screenshots/tui-dark.svg)
+![TUI — Stats](screenshots/tui-stats.svg)
+
+![TUI — Jobs](screenshots/tui-jobs.svg)
 
 ## Configuration
 

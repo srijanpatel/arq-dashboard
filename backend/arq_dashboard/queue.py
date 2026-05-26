@@ -49,9 +49,7 @@ class Queue:
             raise InvalidQueueNameError(f"Queue:{name} is not defined")
         return cls(name=name, redis_settings=redis_settings)
 
-    async def get_jobs(
-        self, status: JobStatus | None = None
-    ) -> list[schemas.JobInfo]:
+    async def get_jobs(self, status: JobStatus | None = None) -> list[schemas.JobInfo]:
         async with get_redis(self.redis_settings) as redis:
             job_ids = await get_job_ids(redis, self.name)
 
@@ -139,9 +137,7 @@ class Queue:
                 return await self._get_job_by_id(redis, job_id)
         return await self._get_job_by_id(redis, job_id)
 
-    async def _get_job_by_id(
-        self, redis: ArqRedis, job_id: str
-    ) -> schemas.JobInfo:
+    async def _get_job_by_id(self, redis: ArqRedis, job_id: str) -> schemas.JobInfo:
         arq_job = ArqJob(
             job_id=job_id,
             redis=redis,
