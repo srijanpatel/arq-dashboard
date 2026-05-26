@@ -1,0 +1,9 @@
+.git
+.venv
+backend/.venv
+backend/.ruff_cache
+frontend/node_modules
+backend/arq_dashboard/frontend
+**/__pycache__
+*.pyc
+.env
