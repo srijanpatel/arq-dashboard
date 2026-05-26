@@ -13,7 +13,11 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "pyhumps>=3.8",
+    "textual>=3.0",
 ]
+
+[project.scripts]
+arq-dashboard = "arq_dashboard.cli:main"
 
 [project.optional-dependencies]
 dev = [

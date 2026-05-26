@@ -22,4 +22,5 @@ RUN uv sync --frozen --no-dev
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "arq_dashboard:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["uv", "run", "arq-dashboard"]
+CMD ["web", "--host", "0.0.0.0", "--port", "8000"]

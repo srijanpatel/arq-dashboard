@@ -10,7 +10,13 @@ docker run --rm -p 8000:8000 \
   ghcr.io/srijanpatel/arq-dashboard:latest
 ```
 
-Open `http://localhost:8000`.
+Open `http://localhost:8000`. Or launch the TUI:
+
+```bash
+docker run --rm -it \
+  -e ARQ_DASHBOARD_REDIS_URL=redis://your-redis:6379 \
+  ghcr.io/srijanpatel/arq-dashboard tui
+```
 
 ![Stats — Light](screenshots/stats-light.png)
 
@@ -26,10 +32,15 @@ Open `http://localhost:8000`.
 - Job list with filtering by function, status, time range
 - Job detail with visual enqueue → start → finish timeline
 - Dark / light mode with system preference detection
+- Terminal UI (`arq-dashboard tui`) — same data, no browser needed
 
 ![Jobs List](screenshots/jobs-light.png)
 
 ![Job Detail](screenshots/job-detail-dark.png)
+
+### Terminal UI
+
+![TUI](screenshots/tui-dark.svg)
 
 ## Configuration
 
