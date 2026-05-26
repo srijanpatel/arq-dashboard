@@ -1,57 +1,38 @@
+<script setup lang="ts">
+import { onMounted, ref } from "vue";
+
+import { API } from "@/api";
+import JobForm from "@/components/job/Form.vue";
+import { useAsyncTask } from "@/composables/useAsyncTask";
+import type { FunctionName, QueueName, SearchParams } from "@/types";
+
+defineProps<{ page: number }>();
+
+const form = ref<InstanceType<typeof JobForm>>();
+
+const { data: functionNames, perform: fetchFunctions } = useAsyncTask<FunctionName[]>(
+  () => API.getFunctionNames()
+);
+const { data: queueNames, perform: fetchQueues } = useAsyncTask<QueueName[]>(
+  () => API.getQueueNames()
+);
+
+function getSearchParams(): SearchParams {
+  return form.value!.getSearchParams();
+}
+
+onMounted(async () => {
+  await Promise.all([fetchFunctions(), fetchQueues()]);
+});
+
+defineExpose({ getSearchParams });
+</script>
+
 <template>
   <JobForm
     ref="form"
     :page="page"
-    :functionNames="getFunctionNamesTask.last?.value || []"
-    :queueNames="getQueueNamesTask.last?.value || []"
-  ></JobForm>
+    :function-names="functionNames || []"
+    :queue-names="queueNames || []"
+  />
 </template>
-
-<script lang="ts">
-import { defineComponent, onMounted, ref } from "vue";
-import { useAsyncTask } from "vue-concurrency";
-
-import { API } from "@/api";
-import JobForm from "@/components/job/Form.vue";
-import { FunctionName, QueueName, SearchParams } from "@/types";
-
-export default defineComponent({
-  name: "FormWrapper",
-  components: {
-    JobForm,
-  },
-  props: {
-    page: {
-      type: Number,
-      required: true,
-    },
-  },
-  setup() {
-    const form = ref<InstanceType<typeof JobForm>>();
-
-    const getSearchParams = () => {
-      return form.value?.getSearchParams() as SearchParams;
-    };
-
-    const getFunctionNamesTask = useAsyncTask<FunctionName[], []>(async () => {
-      return await API.getFunctionNames();
-    });
-
-    const getQueueNamesTask = useAsyncTask<QueueName[], []>(async () => {
-      return await API.getQueueNames();
-    });
-
-    onMounted(async () => {
-      await getFunctionNamesTask.perform();
-      await getQueueNamesTask.perform();
-    });
-
-    return {
-      getFunctionNamesTask,
-      getQueueNamesTask,
-      getSearchParams,
-      form,
-    };
-  },
-});
-</script>

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { getHumanizedRelativeTime } from "@/utils";
 
 describe("getHumanizedRelativeTime", () => {

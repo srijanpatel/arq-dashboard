@@ -1,32 +1,18 @@
-<template>
-  <Setting :queueNames="getQueueNamesTask.last?.value || []"></Setting>
-</template>
-
-<script lang="ts">
-import { defineComponent, onMounted } from "vue";
-import { useAsyncTask } from "vue-concurrency";
+<script setup lang="ts">
+import { onMounted } from "vue";
 
 import { API } from "@/api";
 import Setting from "@/components/setting/Setting.vue";
-import { QueueName } from "@/types";
+import { useAsyncTask } from "@/composables/useAsyncTask";
+import type { QueueName } from "@/types";
 
-export default defineComponent({
-  name: "SettingWrapper",
-  components: {
-    Setting,
-  },
-  setup() {
-    const getQueueNamesTask = useAsyncTask<QueueName[], []>(async () => {
-      return await API.getQueueNames();
-    });
+const { data: queueNames, perform } = useAsyncTask<QueueName[]>(
+  () => API.getQueueNames()
+);
 
-    onMounted(async () => {
-      await getQueueNamesTask.perform();
-    });
-
-    return {
-      getQueueNamesTask,
-    };
-  },
-});
+onMounted(() => perform());
 </script>
+
+<template>
+  <Setting :queue-names="queueNames || []" />
+</template>

@@ -2,23 +2,26 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig(({ _, mode }) => {
+export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const target = env.BACKEND_URL || "http://127.0.0.1:8000/";
-  const port = env.port || 8080;
 
   return {
     plugins: [vue()],
-    server: {
-      port,
-      proxy: {
-        "/api": target,
-      },
-    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
+    },
+    server: {
+      port: 5173,
+      proxy: {
+        "/api": target,
+      },
+    },
+    build: {
+      outDir: "../backend/arq_dashboard/frontend",
+      emptyOutDir: true,
     },
   };
 });

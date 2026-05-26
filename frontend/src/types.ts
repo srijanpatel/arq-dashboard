@@ -28,7 +28,7 @@ export interface CachedJob extends Job {
 
 export interface Stats {
   name: string;
-  address: string;
+  host: string;
   port: number;
   database: number;
   queuedJobs: number;
@@ -53,5 +53,4 @@ export interface ItemName {
 }
 
 export type FunctionName = ItemName;
-
 export type QueueName = ItemName;

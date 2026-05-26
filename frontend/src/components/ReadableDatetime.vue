@@ -1,5 +1,11 @@
+<script setup lang="ts">
+import { getHumanizedRelativeTime, getLocalDatetime } from "@/utils";
+
+defineProps<{ dt?: string }>();
+</script>
+
 <template>
-  <div v-if="dt === undefined">
+  <div v-if="!dt">
     <p>-</p>
   </div>
   <div v-else>
@@ -7,22 +13,3 @@
     <p>({{ getHumanizedRelativeTime(dt) }})</p>
   </div>
 </template>
-
-<script lang="ts">
-import { defineComponent } from "vue";
-
-import { getHumanizedRelativeTime, getLocalDatetime } from "@/utils";
-
-export default defineComponent({
-  name: "ReadableDatetimeItem",
-  props: {
-    dt: {
-      type: String,
-      required: false,
-    },
-  },
-  setup() {
-    return { getHumanizedRelativeTime, getLocalDatetime };
-  },
-});
-</script>

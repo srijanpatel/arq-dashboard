@@ -1,41 +1,25 @@
-<template>
-  <Job :jobId="jobId"></Job>
-</template>
-
-<script lang="ts">
+<script setup lang="ts">
 import { useTitle } from "@vueuse/core";
-import { defineComponent, onMounted, ref, watchEffect } from "vue";
+import { onMounted, ref, watchEffect } from "vue";
 
 import Job from "@/components/job/JobWrapper.vue";
 
-export default defineComponent({
-  name: "ArtifactView",
-  components: {
-    Job,
-  },
-  props: {
-    id: {
-      type: String,
-      required: true,
-    },
-  },
-  setup(props) {
-    const jobId = ref<string>(props.id);
+const props = defineProps<{ id: string }>();
 
-    const updateTitle = () => {
-      useTitle(`Job:${jobId.value} - ARQ Dashboard`);
-    };
+const jobId = ref(props.id);
 
-    onMounted(() => {
-      updateTitle();
-    });
+function updateTitle() {
+  useTitle(`Job:${jobId.value} - ARQ Dashboard`);
+}
 
-    watchEffect(() => {
-      jobId.value = props.id;
-      updateTitle();
-    });
+onMounted(updateTitle);
 
-    return { jobId };
-  },
+watchEffect(() => {
+  jobId.value = props.id;
+  updateTitle();
 });
 </script>
+
+<template>
+  <Job :job-id="jobId" />
+</template>

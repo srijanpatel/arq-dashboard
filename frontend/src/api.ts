@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import { useGlobalState } from "@/store";
-import {
+import type {
   CachedJob,
   FunctionName,
   JobsWithPagination,
@@ -40,9 +40,7 @@ export const API = {
   },
 
   async getJobs(params: SearchParams): Promise<JobsWithPagination> {
-    const res = await client.get<JobsWithPagination>("/api/jobs/", {
-      params: params,
-    });
+    const res = await client.get<JobsWithPagination>("/api/jobs/", { params });
     return res.data;
   },
 
