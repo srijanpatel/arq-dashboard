@@ -1,93 +1,53 @@
-# arq-dash
+# arq-dashboard
 
-A modernized dashboard for [ARQ](https://github.com/samuelcolvin/arq) (async Redis job queue), built with FastAPI and Vue 3.
+A monitoring dashboard for [ARQ](https://github.com/samuelcolvin/arq) (async Redis job queue).
 
-## Acknowledgements
-
-This project is a fork of [ninoseki/arq-dashboard](https://github.com/ninoseki/arq-dashboard) and [ninoseki/arq-dashboard-frontend](https://github.com/ninoseki/arq-dashboard-frontend) by [@ninoseki](https://github.com/ninoseki). The original work provided the foundation — this repo combines both into a monorepo with a modernized stack.
-
-## What changed from the original
-
-- **Monorepo**: Backend and frontend now live in a single repository
-- **Backend**: Python 3.11+, Pydantic v2, pydantic-settings, uv, hatchling, ruff
-- **Frontend**: Vue 3.5+ with `<script setup>`, Vite 6, TypeScript 5, Vitest, ESLint 9 flat config
-- **Removed dependencies**: `async-cache`, `arrow`, `vue-concurrency`, `regenerator-runtime` — replaced with lightweight alternatives or stdlib
-
-## Project structure
-
-```
-arq-dash/
-├── backend/           # FastAPI backend (Python)
-│   ├── arq_dashboard/ # Application package
-│   └── tests/         # pytest test suite
-├── frontend/          # Vue 3 SPA (TypeScript)
-│   ├── src/           # Application source
-│   └── tests/         # Vitest test suite
-└── Makefile           # Dev commands
-```
-
-## Getting started
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+
-- Redis
-- [uv](https://docs.astral.sh/uv/)
-
-### Install dependencies
+## Quick start
 
 ```bash
-make install
+docker run --rm -p 8000:8000 \
+  -e ARQ_DASHBOARD_REDIS_URL=redis://your-redis:6379 \
+  ghcr.io/srijanpatel/arq-dashboard:latest
 ```
 
-### Development
+Open `http://localhost:8000`.
 
-Run the backend and frontend dev servers in separate terminals:
+## Features
 
-```bash
-make dev-backend   # http://localhost:8000
-make dev-frontend  # http://localhost:5173 (proxies API to backend)
-```
+- Queue overview — queued, in-progress, deferred, complete job counts
+- Function performance — success rates, runtime percentiles (p50/p95/p99)
+- Runtime distribution charts and success/failure breakdown
+- Throughput metrics — jobs/min, last 5 minutes, last hour
+- Auto-refresh (10s / 30s / 60s)
+- Job list with filtering by function, status, time range
+- Job detail with visual enqueue → start → finish timeline
+- Dark / light mode with system preference detection
 
-### Build for production
-
-```bash
-make build-frontend  # Builds frontend into backend/arq_dashboard/frontend/
-```
-
-Then run the backend — it serves the built frontend as static files:
-
-```bash
-cd backend && uv run uvicorn arq_dashboard:app
-```
-
-### Configuration
+## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ARQ_DASHBOARD_REDIS_URL` | `redis://localhost:6379` | Redis connection URL |
+| `ARQ_DASHBOARD_CACHE_TTL` | `60` | API cache TTL in seconds |
 | `ARQ_DASHBOARD_DEBUG` | `false` | Debug mode |
 | `ARQ_DASHBOARD_LOG_LEVEL` | `DEBUG` | Log level |
-| `ARQ_DASHBOARD_CACHE_TTL` | `60` | API cache TTL in seconds |
 
-See `.env.example` for the full list.
+## Development
 
-### Testing
+Requires Python 3.11+, Node.js 18+, Redis, and [uv](https://docs.astral.sh/uv/).
 
 ```bash
+make install        # Install all dependencies
+make dev-backend    # Backend on :8000
+make dev-frontend   # Frontend on :5173 (proxies to backend)
 make test           # Run all tests
-make test-backend   # Backend only (requires Redis)
-make test-frontend  # Frontend only
-```
-
-### Linting
-
-```bash
-make lint    # Check all
-make format  # Auto-fix all
+make lint           # Lint all code
 ```
 
 ## License
 
-MIT — see the original [LICENSE](https://github.com/ninoseki/arq-dashboard/blob/main/LICENSE).
+MIT
+
+---
+
+Forked from [ninoseki/arq-dashboard](https://github.com/ninoseki/arq-dashboard) and [ninoseki/arq-dashboard-frontend](https://github.com/ninoseki/arq-dashboard-frontend) by [@ninoseki](https://github.com/ninoseki).
