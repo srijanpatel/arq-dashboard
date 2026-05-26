@@ -1,5 +1,10 @@
 from .function import Function
-from .function_stats import FunctionRuntime, FunctionStatsResponse, RuntimeBucket
+from .function_stats import (
+    FunctionRuntime,
+    FunctionStatsResponse,
+    RuntimeBucket,
+    ThroughputStats,
+)
 from .job import CachedJobInfo, JobDef, JobInfo, JobsWithPagination
 from .queue import Queue, QueueStats
 
@@ -14,4 +19,5 @@ __all__ = [
     "Queue",
     "QueueStats",
     "RuntimeBucket",
+    "ThroughputStats",
 ]

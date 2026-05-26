@@ -1,5 +1,6 @@
 import math
 from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 
 from arq.jobs import JobStatus
 from fastapi import APIRouter, Depends
@@ -12,6 +13,7 @@ from arq_dashboard.schemas.function_stats import (
     FunctionRuntime,
     FunctionStatsResponse,
     RuntimeBucket,
+    ThroughputStats,
 )
 
 router = APIRouter()
@@ -108,7 +110,28 @@ async def _get_function_stats(queue_name: str) -> FunctionStatsResponse:
             runtime_buckets=build_buckets(runtimes_ms),
         ))
 
-    return FunctionStatsResponse(functions=functions)
+    # Compute throughput
+    now = datetime.now(UTC)
+    hour_ago = now - timedelta(hours=1)
+    five_min_ago = now - timedelta(minutes=5)
+
+    jobs_last_hour = sum(
+        1 for job in jobs
+        if job.finish_time and job.finish_time >= hour_ago
+    )
+    jobs_last_5min = sum(
+        1 for job in jobs
+        if job.finish_time and job.finish_time >= five_min_ago
+    )
+    throughput_per_min = round(jobs_last_hour / 60, 2) if jobs_last_hour else 0.0
+
+    throughput = ThroughputStats(
+        jobs_last_hour=jobs_last_hour,
+        jobs_last_5min=jobs_last_5min,
+        throughput_per_min=throughput_per_min,
+    )
+
+    return FunctionStatsResponse(functions=functions, throughput=throughput)
 
 
 @router.get("/", response_model=FunctionStatsResponse)

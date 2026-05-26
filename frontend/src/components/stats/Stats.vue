@@ -81,6 +81,33 @@ function successRate(s: number, total: number): string {
       />
     </div>
 
+    <!-- Throughput -->
+    <div v-if="functionStats?.throughput" class="grid grid-cols-3 mb-xl">
+      <div class="card">
+        <div class="flex items-center gap-sm mb-xs">
+          <span class="text-muted text-sm" style="font-family: var(--font-ui);">THROUGHPUT</span>
+        </div>
+        <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 700;">
+          {{ functionStats.throughput.throughputPerMin }}
+        </div>
+        <div class="text-muted text-sm">jobs / min</div>
+      </div>
+      <div class="card">
+        <div class="text-muted text-sm mb-xs" style="font-family: var(--font-ui);">LAST 5 MINUTES</div>
+        <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 700;">
+          {{ functionStats.throughput.jobsLast5min }}
+        </div>
+        <div class="text-muted text-sm">jobs completed</div>
+      </div>
+      <div class="card">
+        <div class="text-muted text-sm mb-xs" style="font-family: var(--font-ui);">LAST HOUR</div>
+        <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 700;">
+          {{ functionStats.throughput.jobsLastHour }}
+        </div>
+        <div class="text-muted text-sm">jobs completed</div>
+      </div>
+    </div>
+
     <!-- Function Performance -->
     <template v-if="functionStats && functionStats.functions.length > 0">
       <div class="card mb-lg">

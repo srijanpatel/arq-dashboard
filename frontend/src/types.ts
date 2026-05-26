@@ -76,7 +76,14 @@ export interface FunctionRuntime {
   runtimeBuckets: RuntimeBucket[];
 }
 
+export interface ThroughputStats {
+  jobsLastHour: number;
+  jobsLast5min: number;
+  throughputPerMin: number;
+}
+
 export interface FunctionStatsResponse {
   functions: FunctionRuntime[];
+  throughput: ThroughputStats;
   cachedAt: string;
 }
