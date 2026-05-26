@@ -4,18 +4,62 @@ import Status from "@/components/job/Status.vue";
 import Success from "@/components/job/Success.vue";
 import Pagination from "@/components/Pagination.vue";
 import ReadableDatetime from "@/components/ReadableDatetime.vue";
+import { computed, ref } from "vue";
+
 import type { Job, JobsWithPagination } from "@/types";
 
-defineProps<{ jobs: JobsWithPagination }>();
+const props = defineProps<{ jobs: JobsWithPagination }>();
 
-function runtime(job: Job): string {
-  if (!job.startTime || !job.finishTime) return "—";
-  const ms = new Date(job.finishTime).getTime() - new Date(job.startTime).getTime();
+function runtimeMs(job: Job): number | null {
+  if (!job.startTime || !job.finishTime) return null;
+  return new Date(job.finishTime).getTime() - new Date(job.startTime).getTime();
+}
+
+function fmtRuntime(job: Job): string {
+  const ms = runtimeMs(job);
+  if (ms === null) return "—";
   if (ms < 1000) return `${ms}ms`;
   const s = ms / 1000;
   if (s < 60) return `${s.toFixed(1)}s`;
   return `${(s / 60).toFixed(1)}m`;
 }
+
+type JobSortKey = "jobId" | "function" | "status" | "success" | "enqueueTime" | "runtime";
+const sortKey = ref<JobSortKey>("enqueueTime");
+const sortAsc = ref(false);
+
+function toggleSort(key: JobSortKey) {
+  if (sortKey.value === key) {
+    sortAsc.value = !sortAsc.value;
+  } else {
+    sortKey.value = key;
+    sortAsc.value = key === "function" || key === "jobId";
+  }
+}
+
+function sortArrow(key: JobSortKey): string {
+  if (sortKey.value !== key) return "";
+  return sortAsc.value ? " ↑" : " ↓";
+}
+
+const sortedJobs = computed(() => {
+  const jobs = [...props.jobs.jobs];
+  const dir = sortAsc.value ? 1 : -1;
+  const key = sortKey.value;
+  return jobs.sort((a, b) => {
+    if (key === "runtime") {
+      const ar = runtimeMs(a) ?? -1;
+      const br = runtimeMs(b) ?? -1;
+      return (ar - br) * dir;
+    }
+    if (key === "success") {
+      return ((a.success ? 1 : 0) - (b.success ? 1 : 0)) * dir;
+    }
+    const av = a[key] ?? "";
+    const bv = b[key] ?? "";
+    return av < bv ? -dir : av > bv ? dir : 0;
+  });
+});
 
 const emit = defineEmits<{
   "update-page": [page: number];
@@ -33,17 +77,17 @@ const emit = defineEmits<{
       <table class="table">
         <thead>
           <tr>
-            <th>Job ID</th>
+            <th class="sortable" @click="toggleSort('jobId')">Job ID{{ sortArrow('jobId') }}</th>
             <th>Queue</th>
-            <th>Function</th>
-            <th>Status</th>
-            <th>Success</th>
-            <th>Enqueued</th>
-            <th>Runtime</th>
+            <th class="sortable" @click="toggleSort('function')">Function{{ sortArrow('function') }}</th>
+            <th class="sortable" @click="toggleSort('status')">Status{{ sortArrow('status') }}</th>
+            <th class="sortable" @click="toggleSort('success')">Success{{ sortArrow('success') }}</th>
+            <th class="sortable" @click="toggleSort('enqueueTime')">Enqueued{{ sortArrow('enqueueTime') }}</th>
+            <th class="sortable" @click="toggleSort('runtime')">Runtime{{ sortArrow('runtime') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="job in jobs.jobs" :key="job.jobId">
+          <tr v-for="job in sortedJobs" :key="job.jobId">
             <td>
               <router-link
                 class="text-mono text-sm"
@@ -55,7 +99,7 @@ const emit = defineEmits<{
             <td><Status :status="job.status" /></td>
             <td><Success :success="job.success" :status="job.status" /></td>
             <td class="text-sm"><ReadableDatetime :dt="job.enqueueTime || undefined" /></td>
-            <td class="text-mono text-sm">{{ runtime(job) }}</td>
+            <td class="text-mono text-sm">{{ fmtRuntime(job) }}</td>
           </tr>
         </tbody>
       </table>

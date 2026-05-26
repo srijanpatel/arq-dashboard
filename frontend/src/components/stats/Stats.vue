@@ -15,6 +15,44 @@ const props = defineProps<{
 const state = useGlobalState();
 const selectedFunction = ref<string>("");
 
+type FnSortKey = "function" | "count" | "successRate" | "avgRuntimeMs" | "p50RuntimeMs" | "p95RuntimeMs" | "p99RuntimeMs";
+const fnSortKey = ref<FnSortKey>("count");
+const fnSortAsc = ref(false);
+
+function toggleFnSort(key: FnSortKey) {
+  if (fnSortKey.value === key) {
+    fnSortAsc.value = !fnSortAsc.value;
+  } else {
+    fnSortKey.value = key;
+    fnSortAsc.value = key === "function";
+  }
+}
+
+function fnSortArrow(key: FnSortKey): string {
+  if (fnSortKey.value !== key) return "";
+  return fnSortAsc.value ? " ↑" : " ↓";
+}
+
+const sortedFunctions = computed(() => {
+  if (!props.functionStats) return [];
+  const fns = [...props.functionStats.functions];
+  const dir = fnSortAsc.value ? 1 : -1;
+  const key = fnSortKey.value;
+  return fns.sort((a, b) => {
+    let av: number | string, bv: number | string;
+    if (key === "function") {
+      av = a.function; bv = b.function;
+      return av < bv ? -dir : av > bv ? dir : 0;
+    } else if (key === "successRate") {
+      av = a.count > 0 ? a.successCount / a.count : 0;
+      bv = b.count > 0 ? b.successCount / b.count : 0;
+    } else {
+      av = a[key]; bv = b[key];
+    }
+    return ((av as number) - (bv as number)) * dir;
+  });
+});
+
 function formatMs(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
@@ -116,17 +154,17 @@ function successRate(s: number, total: number): string {
           <table class="table">
             <thead>
               <tr>
-                <th>Function</th>
-                <th>Calls</th>
-                <th>Success Rate</th>
-                <th>Avg</th>
-                <th>p50</th>
-                <th>p95</th>
-                <th>p99</th>
+                <th class="sortable" @click="toggleFnSort('function')">Function{{ fnSortArrow('function') }}</th>
+                <th class="sortable" @click="toggleFnSort('count')">Calls{{ fnSortArrow('count') }}</th>
+                <th class="sortable" @click="toggleFnSort('successRate')">Success Rate{{ fnSortArrow('successRate') }}</th>
+                <th class="sortable" @click="toggleFnSort('avgRuntimeMs')">Avg{{ fnSortArrow('avgRuntimeMs') }}</th>
+                <th class="sortable" @click="toggleFnSort('p50RuntimeMs')">p50{{ fnSortArrow('p50RuntimeMs') }}</th>
+                <th class="sortable" @click="toggleFnSort('p95RuntimeMs')">p95{{ fnSortArrow('p95RuntimeMs') }}</th>
+                <th class="sortable" @click="toggleFnSort('p99RuntimeMs')">p99{{ fnSortArrow('p99RuntimeMs') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="fn in functionStats.functions" :key="fn.function">
+              <tr v-for="fn in sortedFunctions" :key="fn.function">
                 <td class="text-mono text-sm">{{ fn.function }}</td>
                 <td>{{ fn.count }}</td>
                 <td>
