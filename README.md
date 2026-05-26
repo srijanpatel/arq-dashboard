@@ -1,36 +1,93 @@
-# arq-dashboard
+# arq-dash
 
-[![PyPI version](https://badge.fury.io/py/arq-dashboard.svg)](https://badge.fury.io/py/arq-dashboard)
-[![Python CI](https://github.com/ninoseki/arq-dashboard/actions/workflows/test.yml/badge.svg)](https://github.com/ninoseki/arq-dashboard/actions/workflows/test.yml)
+A modernized dashboard for [ARQ](https://github.com/samuelcolvin/arq) (async Redis job queue), built with FastAPI and Vue 3.
 
-A dashboard for [ARQ](https://github.com/samuelcolvin/arq) built with [FastAPI](https://github.com/tiangolo/fastapi).
+## Acknowledgements
 
-## Screenshots
+This project is a fork of [ninoseki/arq-dashboard](https://github.com/ninoseki/arq-dashboard) and [ninoseki/arq-dashboard-frontend](https://github.com/ninoseki/arq-dashboard-frontend) by [@ninoseki](https://github.com/ninoseki). The original work provided the foundation — this repo combines both into a monorepo with a modernized stack.
 
-![img](https://raw.githubusercontent.com/ninoseki/arq-dashboard/main/screenshots/stats.png)
+## What changed from the original
 
----
+- **Monorepo**: Backend and frontend now live in a single repository
+- **Backend**: Python 3.11+, Pydantic v2, pydantic-settings, uv, hatchling, ruff
+- **Frontend**: Vue 3.5+ with `<script setup>`, Vite 6, TypeScript 5, Vitest, ESLint 9 flat config
+- **Removed dependencies**: `async-cache`, `arrow`, `vue-concurrency`, `regenerator-runtime` — replaced with lightweight alternatives or stdlib
 
-![img](https://raw.githubusercontent.com/ninoseki/arq-dashboard/main/screenshots/jobs.png)
+## Project structure
 
-## Requirements
-
-- Python 3.8+
-
-## Installation
-
-```bash
-pip install arq-dashboard
+```
+arq-dash/
+├── backend/           # FastAPI backend (Python)
+│   ├── arq_dashboard/ # Application package
+│   └── tests/         # pytest test suite
+├── frontend/          # Vue 3 SPA (TypeScript)
+│   ├── src/           # Application source
+│   └── tests/         # Vitest test suite
+└── Makefile           # Dev commands
 ```
 
-## Docs
+## Getting started
 
-- [Configuration](https://github.com/ninoseki/arq-dashboard/wiki/Configuration)
-- [Usage](https://github.com/ninoseki/arq-dashboard/wiki/Usage)
-- [Advanced Usage](https://github.com/ninoseki/arq-dashboard/wiki/Advanced-Usage)
+### Prerequisites
 
-## Alternatives
+- Python 3.11+
+- Node.js 18+
+- Redis
+- [uv](https://docs.astral.sh/uv/)
 
-- [SlavaSkvortsov/arq-django-admin](https://github.com/SlavaSkvortsov/arq-django-admin): Admin dashboard for arq based on django-rq
-- [long2ice/rearq](https://github.com/long2ice/rearq): A distributed task queue built with asyncio and redis, with built-in web interface
-- [tobymao/saq](https://github.com/tobymao/saq): Simple Async Queues
+### Install dependencies
+
+```bash
+make install
+```
+
+### Development
+
+Run the backend and frontend dev servers in separate terminals:
+
+```bash
+make dev-backend   # http://localhost:8000
+make dev-frontend  # http://localhost:5173 (proxies API to backend)
+```
+
+### Build for production
+
+```bash
+make build-frontend  # Builds frontend into backend/arq_dashboard/frontend/
+```
+
+Then run the backend — it serves the built frontend as static files:
+
+```bash
+cd backend && uv run uvicorn arq_dashboard:app
+```
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ARQ_DASHBOARD_REDIS_URL` | `redis://localhost:6379` | Redis connection URL |
+| `ARQ_DASHBOARD_DEBUG` | `false` | Debug mode |
+| `ARQ_DASHBOARD_LOG_LEVEL` | `DEBUG` | Log level |
+| `ARQ_DASHBOARD_CACHE_TTL` | `60` | API cache TTL in seconds |
+
+See `.env.example` for the full list.
+
+### Testing
+
+```bash
+make test           # Run all tests
+make test-backend   # Backend only (requires Redis)
+make test-frontend  # Frontend only
+```
+
+### Linting
+
+```bash
+make lint    # Check all
+make format  # Auto-fix all
+```
+
+## License
+
+MIT — see the original [LICENSE](https://github.com/ninoseki/arq-dashboard/blob/main/LICENSE).
