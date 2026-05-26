@@ -5,7 +5,7 @@ defineProps<{ cachedAt: string }>();
 </script>
 
 <template>
-  <p class="has-text-grey">
-    Cached at: {{ getLocalDatetime(cachedAt) }} ({{ getHumanizedRelativeTime(cachedAt) }})
+  <p class="text-muted text-sm mt-sm">
+    Cached at {{ getLocalDatetime(cachedAt) }} ({{ getHumanizedRelativeTime(cachedAt) }})
   </p>
 </template>

@@ -16,7 +16,7 @@ const router = useRouter();
 const options = { route, router };
 
 const totalPageCount = computed(() => Math.ceil(props.total / props.pageSize));
-const hasOnlyOnePage = computed(() => totalPageCount.value === 1);
+const hasOnlyOnePage = computed(() => totalPageCount.value <= 1);
 const hasPreviousPage = computed(() => props.currentPage > 1);
 const isPreviousPageNotFirst = computed(() => props.currentPage - 1 !== 1);
 const hasNextPage = computed(() => props.currentPage < totalPageCount.value);
@@ -37,42 +37,32 @@ onMounted(() => {
 </script>
 
 <template>
-  <nav class="pagination" role="navigation" aria-label="pagination">
-    <ul v-if="hasOnlyOnePage" class="pagination-list">
-      <li>
-        <a class="pagination-link mt-2 is-current" @click="updatePage(1)">1</a>
-      </li>
-    </ul>
-    <ul v-else class="pagination-list">
-      <li v-if="hasPreviousPage && isPreviousPageNotFirst">
-        <a class="pagination-link mt-2" @click="updatePage(1)">1</a>
-      </li>
-      <li v-if="hasPreviousPage && isPreviousPageNotFirst">
-        <span class="pagination-ellipsis">&hellip;</span>
-      </li>
-      <li v-if="hasPreviousPage">
-        <a class="pagination-link mt-2" @click="updatePage(currentPage - 1)">
-          {{ currentPage - 1 }}
-        </a>
-      </li>
-      <li>
-        <a class="pagination-link mt-2 is-current" @click="updatePage(currentPage)">
-          {{ currentPage }}
-        </a>
-      </li>
-      <li v-if="hasNextPage">
-        <a class="pagination-link mt-2" @click="updatePage(currentPage + 1)">
-          {{ currentPage + 1 }}
-        </a>
-      </li>
-      <li v-if="hasNextPage && isNextPageNotLast">
-        <span class="pagination-ellipsis">&hellip;</span>
-      </li>
-      <li v-if="hasNextPage && isNextPageNotLast">
-        <a class="pagination-link mt-2" @click="updatePage(totalPageCount)">
-          {{ totalPageCount }}
-        </a>
-      </li>
-    </ul>
+  <nav v-if="!hasOnlyOnePage" class="pagination" aria-label="pagination">
+    <a
+      v-if="hasPreviousPage && isPreviousPageNotFirst"
+      class="pagination-link"
+      @click="updatePage(1)"
+    >1</a>
+    <span v-if="hasPreviousPage && isPreviousPageNotFirst" class="pagination-ellipsis">&hellip;</span>
+    <a
+      v-if="hasPreviousPage"
+      class="pagination-link"
+      @click="updatePage(currentPage - 1)"
+    >{{ currentPage - 1 }}</a>
+    <a
+      class="pagination-link pagination-link-active"
+      @click="updatePage(currentPage)"
+    >{{ currentPage }}</a>
+    <a
+      v-if="hasNextPage"
+      class="pagination-link"
+      @click="updatePage(currentPage + 1)"
+    >{{ currentPage + 1 }}</a>
+    <span v-if="hasNextPage && isNextPageNotLast" class="pagination-ellipsis">&hellip;</span>
+    <a
+      v-if="hasNextPage && isNextPageNotLast"
+      class="pagination-link"
+      @click="updatePage(totalPageCount)"
+    >{{ totalPageCount }}</a>
   </nav>
 </template>

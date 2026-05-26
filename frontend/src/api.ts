@@ -4,6 +4,7 @@ import { useGlobalState } from "@/store";
 import type {
   CachedJob,
   FunctionName,
+  FunctionStatsResponse,
   JobsWithPagination,
   QueueName,
   SearchParams,
@@ -51,6 +52,11 @@ export const API = {
 
   async getQueueNames(): Promise<QueueName[]> {
     const res = await client.get<QueueName[]>("/api/queues/");
+    return res.data;
+  },
+
+  async getFunctionStats(): Promise<FunctionStatsResponse> {
+    const res = await client.get<FunctionStatsResponse>("/api/stats/functions/");
     return res.data;
   },
 };

@@ -14,14 +14,14 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^6.7",
     "@vuepic/vue-datepicker": "^11",
     "@vueuse/core": "^12",
     "@vueuse/router": "^12",
     "axios": "^1.7",
-    "bulma": "^1.0",
+    "chart.js": "^4.5.1",
     "dayjs": "^1.11",
     "vue": "^3.5",
+    "vue-chartjs": "^5.3.3",
     "vue-json-pretty": "^2.4",
     "vue-router": "^4.5"
   },

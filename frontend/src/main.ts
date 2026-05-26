@@ -1,5 +1,4 @@
-import "@fortawesome/fontawesome-free/css/all.css";
-import "bulma/css/bulma.css";
+import "@/styles/index.css";
 
 import { createApp } from "vue";
 

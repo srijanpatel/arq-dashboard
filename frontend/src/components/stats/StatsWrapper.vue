@@ -6,34 +6,39 @@ import CachedAt from "@/components/CachedAt.vue";
 import ErrorMessage from "@/components/ErrorMessage.vue";
 import Loading from "@/components/Loading.vue";
 import StatsComponent from "@/components/stats/Stats.vue";
+import Icon from "@/components/ui/Icon.vue";
 import { useAsyncTask } from "@/composables/useAsyncTask";
-import type { Stats } from "@/types";
+import type { FunctionStatsResponse, Stats } from "@/types";
 
-const { data: stats, isRunning, isError, error, perform } = useAsyncTask<Stats>(
+const { data: stats, isRunning, isError, error, perform: fetchStats } = useAsyncTask<Stats>(
   () => API.getStats()
 );
 
-onMounted(() => perform());
+const { data: functionStats, perform: fetchFunctionStats } = useAsyncTask<FunctionStatsResponse>(
+  () => API.getFunctionStats()
+);
+
+async function refresh() {
+  await Promise.all([fetchStats(), fetchFunctionStats()]);
+}
+
+onMounted(() => refresh());
 </script>
 
 <template>
   <Loading v-if="isRunning" />
 
   <div v-if="stats">
-    <StatsComponent :stats="stats" />
+    <StatsComponent :stats="stats" :function-stats="functionStats" />
 
-    <div class="columns">
-      <div class="column">
-        <div class="field is-grouped is-grouped-centered">
-          <p class="control">
-            <a class="button is-light" @click="perform()">
-              <span class="icon is-small"><i class="fas fa-sync"></i></span>
-              <span>Update</span>
-            </a>
-          </p>
-        </div>
-        <CachedAt :cached-at="stats.cachedAt" />
-      </div>
+    <div class="flex justify-center items-center gap-md mt-lg">
+      <button class="btn" @click="refresh">
+        <Icon name="refresh" :size="14" />
+        Refresh
+      </button>
+    </div>
+    <div class="text-center mt-sm">
+      <CachedAt :cached-at="stats.cachedAt" />
     </div>
   </div>
 

@@ -1,5 +1,5 @@
 import sys
-from typing import TextIO
+from typing import Any
 from urllib.parse import urlparse
 
 from arq.connections import RedisSettings
@@ -9,13 +9,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="ARQ_DASHBOARD_")
+    model_config = SettingsConfigDict(
+        env_prefix="ARQ_DASHBOARD_",
+        arbitrary_types_allowed=True,
+    )
 
     project_name: str = "arq-dashboard"
     debug: bool = False
     testing: bool = False
 
-    log_file: TextIO = sys.stderr
+    log_file: Any = sys.stderr
     log_level: str = "DEBUG"
     log_backtrace: bool = True
 

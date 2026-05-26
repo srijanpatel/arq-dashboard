@@ -3,17 +3,18 @@ import { computed } from "vue";
 
 const props = defineProps<{ status: string }>();
 
-const statusToClass = new Map<string, string>([
-  ["deferred", "is-info"],
-  ["queued", ""],
-  ["in_progress", "is-link"],
-  ["complete", "is-success"],
-  ["not_found", "is-warning"],
-]);
-
-const className = computed(() => statusToClass.get(props.status) || "");
+const tagClass = computed(() => {
+  const map: Record<string, string> = {
+    deferred: "tag-info",
+    queued: "tag-neutral",
+    in_progress: "tag-accent",
+    complete: "tag-success",
+    not_found: "tag-warning",
+  };
+  return map[props.status] || "tag-neutral";
+});
 </script>
 
 <template>
-  <span class="tag is-medium" :class="className">{{ status }}</span>
+  <span class="tag" :class="tagClass">{{ status }}</span>
 </template>

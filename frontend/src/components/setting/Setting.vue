@@ -17,16 +17,13 @@ function updateSetting() {
 </script>
 
 <template>
-  <div class="box">
-    <div class="field">
-      <label class="label">ARQ queue name</label>
-      <div class="control">
-        <div class="select">
-          <select v-model="queue" @change="updateSetting">
-            <option v-for="q in queueNames" :key="q.name">{{ q.name }}</option>
-          </select>
-        </div>
-      </div>
+  <div class="card" style="max-width: 480px;">
+    <h3 class="mb-md">Queue Settings</h3>
+    <div class="form-group">
+      <label class="form-label">ARQ queue name</label>
+      <select v-model="queue" class="form-select" @change="updateSetting">
+        <option v-for="q in queueNames" :key="q.name">{{ q.name }}</option>
+      </select>
     </div>
   </div>
 </template>

@@ -3,14 +3,14 @@ import { computed } from "vue";
 
 const props = defineProps<{ success: boolean; status: string }>();
 
-const className = computed(() => {
+const tagClass = computed(() => {
   if (props.status === "complete") {
-    return props.success ? "is-success" : "is-danger";
+    return props.success ? "tag-success" : "tag-danger";
   }
-  return "";
+  return "tag-neutral";
 });
 </script>
 
 <template>
-  <span class="tag is-medium is-light" :class="className">{{ success }}</span>
+  <span class="tag" :class="tagClass">{{ success }}</span>
 </template>

@@ -4,9 +4,9 @@ import Navbar from "@/components/Navbar.vue";
 
 <template>
   <Navbar />
-  <section class="section is-medium">
+  <main class="section">
     <div class="container">
       <router-view />
     </div>
-  </section>
+  </main>
 </template>

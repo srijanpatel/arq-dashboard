@@ -6,6 +6,7 @@ import ErrorMessage from "@/components/ErrorMessage.vue";
 import JobForm from "@/components/job/FormWrapper.vue";
 import Jobs from "@/components/job/Jobs.vue";
 import Loading from "@/components/Loading.vue";
+import Icon from "@/components/ui/Icon.vue";
 import { useAsyncTask } from "@/composables/useAsyncTask";
 import type { JobsWithPagination, SearchParams } from "@/types";
 
@@ -28,17 +29,13 @@ function updatePage(newPage: number) {
   page.value = newPage;
 }
 
-function resetPage() {
-  page.value = 1;
-}
-
 async function refreshPage() {
-  resetPage();
+  page.value = 1;
   await fetchJobs();
 }
 
 async function search() {
-  resetPage();
+  page.value = 1;
   nextTick(() => fetchJobs());
 }
 
@@ -50,27 +47,18 @@ watch(page, () => {
 </script>
 
 <template>
-  <div class="box mb-6">
+  <div class="card mb-lg">
     <JobForm ref="form" :page="page" />
-
     <hr />
-
-    <div class="columns">
-      <div class="column">
-        <div class="field is-grouped is-grouped-centered">
-          <p class="control">
-            <a class="button is-light" @click="search">
-              <span class="icon is-small"><i class="fas fa-search"></i></span>
-              <span>Search</span>
-            </a>
-          </p>
-        </div>
-      </div>
+    <div class="flex justify-center">
+      <button class="btn" @click="search">
+        <Icon name="search" :size="14" />
+        Search
+      </button>
     </div>
   </div>
 
   <div v-if="performCount > 0">
-    <hr />
     <Loading v-if="isRunning" />
     <ErrorMessage v-if="isError" :error="error" />
     <Jobs

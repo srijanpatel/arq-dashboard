@@ -49,101 +49,67 @@ defineExpose({ getSearchParams });
 </script>
 
 <template>
-  <div class="columns">
-    <div class="column">
-      <div class="field is-horizontal">
-        <div class="field-label is-normal">
-          <label class="label">Function</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <div class="control">
-              <div class="select">
-                <select v-model="functionName">
-                  <option value=""></option>
-                  <option v-for="f in functionNames" :key="f.name">{{ f.name }}</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Function</label>
+      <select v-model="functionName" class="form-select">
+        <option value="">All functions</option>
+        <option v-for="f in functionNames" :key="f.name" :value="f.name">{{ f.name }}</option>
+      </select>
     </div>
-    <div class="column">
-      <div class="field is-horizontal">
-        <div class="field-label is-normal">
-          <label class="label">Status</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <div class="control">
-              <div class="select">
-                <select v-model="status">
-                  <option value=""></option>
-                  <option v-for="s in statuses" :key="s">{{ s }}</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select v-model="status" class="form-select">
+        <option value="">All statuses</option>
+        <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
+      </select>
     </div>
   </div>
 
-  <div class="columns">
-    <div class="column">
-      <div class="field is-horizontal">
-        <div class="field-label is-normal">
-          <label class="label">Start time</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <p class="control">
-              <Datepicker v-model="startTime" />
-            </p>
-          </div>
-        </div>
-      </div>
+  <div class="form-row mt-md">
+    <div class="form-group">
+      <label class="form-label">Start time</label>
+      <Datepicker v-model="startTime" />
     </div>
-    <div class="column">
-      <div class="field is-horizontal">
-        <div class="field-label is-normal">
-          <label class="label">Finish time</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <p class="control">
-              <Datepicker v-model="finishTime" />
-            </p>
-          </div>
-        </div>
-      </div>
+    <div class="form-group">
+      <label class="form-label">Finish time</label>
+      <Datepicker v-model="finishTime" />
     </div>
   </div>
 
-  <div class="columns">
-    <div class="column">
-      <div class="field is-horizontal">
-        <div class="field-label is-normal">
-          <label class="label">Success</label>
-        </div>
-        <div class="field-body">
-          <div class="field">
-            <div class="control">
-              <label class="radio">
-                <input type="radio" v-model="success" :value="true" /> True
-              </label>
-              <label class="radio">
-                <input type="radio" v-model="success" :value="false" /> False
-              </label>
-              <label class="radio">
-                <input type="radio" v-model="success" :value="undefined" /> Both
-              </label>
-            </div>
-          </div>
-        </div>
+  <div class="form-row mt-md">
+    <div class="form-group">
+      <label class="form-label">Success</label>
+      <div class="form-radio-group">
+        <label class="form-radio">
+          <input type="radio" v-model="success" :value="true" /> True
+        </label>
+        <label class="form-radio">
+          <input type="radio" v-model="success" :value="false" /> False
+        </label>
+        <label class="form-radio">
+          <input type="radio" v-model="success" :value="undefined" /> Both
+        </label>
       </div>
     </div>
-    <div class="column"></div>
   </div>
 </template>
+
+<style scoped>
+/* Override vue-datepicker to match theme */
+:deep(.dp__theme_light),
+:deep(.dp__theme_dark) {
+  --dp-background-color: var(--color-bg);
+  --dp-text-color: var(--color-text);
+  --dp-hover-color: var(--color-surface-hover);
+  --dp-hover-text-color: var(--color-text);
+  --dp-primary-color: var(--color-accent);
+  --dp-primary-text-color: #fff;
+  --dp-secondary-color: var(--color-text-dim);
+  --dp-border-color: var(--color-border);
+  --dp-menu-border-color: var(--color-border);
+  --dp-border-color-hover: var(--color-accent);
+  --dp-disabled-color: var(--color-text-dim);
+  --dp-icon-color: var(--color-text-muted);
+}
+</style>

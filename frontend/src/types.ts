@@ -54,3 +54,29 @@ export interface ItemName {
 
 export type FunctionName = ItemName;
 export type QueueName = ItemName;
+
+// Function stats
+export interface RuntimeBucket {
+  rangeStartMs: number;
+  rangeEndMs: number;
+  count: number;
+}
+
+export interface FunctionRuntime {
+  function: string;
+  count: number;
+  successCount: number;
+  failureCount: number;
+  avgRuntimeMs: number;
+  p50RuntimeMs: number;
+  p95RuntimeMs: number;
+  p99RuntimeMs: number;
+  minRuntimeMs: number;
+  maxRuntimeMs: number;
+  runtimeBuckets: RuntimeBucket[];
+}
+
+export interface FunctionStatsResponse {
+  functions: FunctionRuntime[];
+  cachedAt: string;
+}

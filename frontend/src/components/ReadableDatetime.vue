@@ -5,11 +5,8 @@ defineProps<{ dt?: string }>();
 </script>
 
 <template>
-  <div v-if="!dt">
-    <p>-</p>
-  </div>
-  <div v-else>
-    <p>{{ getLocalDatetime(dt) }}</p>
-    <p>({{ getHumanizedRelativeTime(dt) }})</p>
-  </div>
+  <span v-if="!dt" class="text-muted">—</span>
+  <span v-else :title="getLocalDatetime(dt)">
+    {{ getHumanizedRelativeTime(dt) }}
+  </span>
 </template>
