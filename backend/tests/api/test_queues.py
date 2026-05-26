@@ -1,9 +1,9 @@
-from fastapi.testclient import TestClient
+import pytest
+from httpx import AsyncClient
 
 
-def test_queues(client: TestClient):
-    res = client.get("/api/queues/")
+@pytest.mark.asyncio
+async def test_queues(client: AsyncClient):
+    res = await client.get("/api/queues/")
     assert res.status_code == 200
-
-    data = res.json()
-    assert isinstance(data, list)
+    assert isinstance(res.json(), list)

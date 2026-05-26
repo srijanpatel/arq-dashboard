@@ -1,44 +1,46 @@
 import sys
-from typing import Optional, TextIO
+from typing import TextIO
+from urllib.parse import urlparse
 
 from arq.connections import RedisSettings
 from arq.constants import default_queue_name
 from arq.jobs import Deserializer
-from starlette.config import Config
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .datastructures import DatabaseURL
 
-config = Config(".env")
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="ARQ_DASHBOARD_")
 
-# general settings
-PROJECT_NAME: str = config("ARQ_DASHBOARD_PROJECT_NAME", default="arq-dashboard")
+    project_name: str = "arq-dashboard"
+    debug: bool = False
+    testing: bool = False
 
-DEBUG: bool = config("ARQ_DASHBOARD_DEBUG", cast=bool, default=False)
-TESTING: bool = config("ARQ_DASHBOARD_TESTING", cast=bool, default=False)
+    log_file: TextIO = sys.stderr
+    log_level: str = "DEBUG"
+    log_backtrace: bool = True
 
-# log settings
-LOG_FILE: TextIO = config("ARQ_DASHBOARD_LOG_FILE", default=sys.stderr)
-LOG_LEVEL: str = config("ARQ_DASHBOARD_LOG_LEVEL", cast=str, default="DEBUG")
-LOG_BACKTRACE: bool = config("ARQ_DASHBOARD_LOG_BACKTRACE", cast=bool, default=True)
+    redis_url: str = "redis://localhost:6379"
+    arq_deserializer: Deserializer | None = None
 
-# Redis & ARQ settings
-REDIS_URL: DatabaseURL = config(
-    "ARQ_DASHBOARD_REDIS_URL", cast=DatabaseURL, default="redis://localhost:6379"
-)
-ARQ_DESERIALIZER: Optional[Deserializer] = None
+    max_at_once: int | None = 10
+    max_per_seconds: int | None = None
 
-ARQ_QUEUES = {
-    default_queue_name: RedisSettings(
-        host=str(REDIS_URL.hostname),
-        port=REDIS_URL.port or 6379,
-        password=REDIS_URL.password,
-    )
-}
+    cache_ttl: int = 60
+    cache_max_size: int = 32
 
-MAX_AT_ONCE: Optional[int] = config("ARQ_DASHBOARD_MAX_AT_ONCE", cast=int, default=10)
-MAX_PER_SECONDS: Optional[int] = config(
-    "ARQ_DASHBOARD_MAX_PER_SECONDS", cast=int, default=None
-)
+    @property
+    def redis_settings(self) -> RedisSettings:
+        parsed = urlparse(self.redis_url)
+        return RedisSettings(
+            host=parsed.hostname or "localhost",
+            port=parsed.port or 6379,
+            password=parsed.password,
+            database=int(parsed.path.lstrip("/") or 0),
+        )
 
-CACHE_TTL: int = config("ARQ_DASHBOARD_CACHE_TTL", cast=int, default=60)
-CACHE_MAX_SIZE: int = config("ARQ_DASHBOARD_CACHE_MAX_SIZE", cast=int, default=32)
+    @property
+    def arq_queues(self) -> dict[str, RedisSettings]:
+        return {default_queue_name: self.redis_settings}
+
+
+settings = Settings()

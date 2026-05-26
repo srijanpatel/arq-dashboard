@@ -1,13 +1,12 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
-import arrow
 from pydantic import Field
 
 from .api_model import APIModel
 
 
-def get_cached_at():
-    return arrow.utcnow().datetime
+def get_cached_at() -> datetime:
+    return datetime.now(UTC)
 
 
 class CachedAtMixin(APIModel):

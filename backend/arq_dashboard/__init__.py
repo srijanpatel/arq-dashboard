@@ -1,10 +1,7 @@
-try:
-    import importlib.metadata as importlib_metadata
-except ModuleNotFoundError:
-    import importlib_metadata
+from importlib.metadata import version
 
 from .main import create_app
 
-__version__ = importlib_metadata.version(__name__)
+__version__ = version(__name__)
 
 app = create_app()

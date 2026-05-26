@@ -1,9 +1,9 @@
-from fastapi.testclient import TestClient
+import pytest
+from httpx import AsyncClient
 
 
-def test_functions(client: TestClient):
-    res = client.get("/api/functions/")
+@pytest.mark.asyncio
+async def test_functions(client: AsyncClient):
+    res = await client.get("/api/functions/")
     assert res.status_code == 200
-
-    data = res.json()
-    assert isinstance(data, list)
+    assert isinstance(res.json(), list)

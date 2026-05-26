@@ -1,42 +1,37 @@
-# Forked from https://github.com/SlavaSkvortsov/arq-django-admin
 import functools
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Union
 
 import aiometer
 from arq import ArqRedis
 from arq.connections import RedisSettings
 from arq.constants import result_key_prefix
-from arq.jobs import DeserializationError
+from arq.jobs import DeserializationError, JobDef, JobStatus
 from arq.jobs import Job as ArqJob
-from arq.jobs import JobDef, JobStatus
 
 from arq_dashboard import schemas
-from arq_dashboard.core import settings
+from arq_dashboard.core.settings import settings
 
 from .dependencies import get_redis
 from .errors import InvalidQueueNameError
 
 
-async def scan(redis: ArqRedis, match: str):
-    result = []
+async def scan(redis: ArqRedis, match: str) -> list[bytes]:
+    result: list[bytes] = []
     cur, keys = await redis.scan(cursor=0, match=match)
     result.extend(keys)
-
     while cur != 0:
         cur, keys = await redis.scan(cursor=cur, match=match)
         result.extend(keys)
-
     return result
 
 
-async def get_result_job_ids(redis: ArqRedis) -> Set[str]:
+async def get_result_job_ids(redis: ArqRedis) -> set[str]:
     result_keys = await scan(redis, f"{result_key_prefix}*")
     return {key[len(result_key_prefix) :] for key in result_keys}
 
 
-async def get_job_ids(redis: ArqRedis, queue_name: str) -> Set[str]:
+async def get_job_ids(redis: ArqRedis, queue_name: str) -> set[str]:
     job_ids = set(await redis.zrangebyscore(queue_name, "-inf", "inf"))
     job_ids |= await get_result_job_ids(redis)
     return {job_id.decode() for job_id in job_ids}
@@ -49,21 +44,20 @@ class Queue:
 
     @classmethod
     def from_name(cls, name: str) -> "Queue":
-        redis_settings = settings.ARQ_QUEUES.get(name)
+        redis_settings = settings.arq_queues.get(name)
         if redis_settings is None:
             raise InvalidQueueNameError(f"Queue:{name} is not defined")
-
         return cls(name=name, redis_settings=redis_settings)
 
     async def get_jobs(
-        self, status: Optional[JobStatus] = None
-    ) -> List[schemas.JobInfo]:
+        self, status: JobStatus | None = None
+    ) -> list[schemas.JobInfo]:
         async with get_redis(self.redis_settings) as redis:
             job_ids = await get_job_ids(redis, self.name)
 
             if status:
                 job_ids_list = list(job_ids)
-                if len(job_ids_list) == 0:
+                if not job_ids_list:
                     return []
 
                 filtered_job_ids = set(
@@ -74,24 +68,23 @@ class Queue:
                             )
                             for job_id in job_ids_list
                         ],
-                        max_at_once=settings.MAX_AT_ONCE,
-                        max_per_second=settings.MAX_PER_SECONDS,
+                        max_at_once=settings.max_at_once,
+                        max_per_second=settings.max_per_seconds,
                     )
                 )
-                # remove None from the set
                 filtered_job_ids.discard(None)
                 job_ids = filtered_job_ids
 
-            if len(job_ids) == 0:
+            if not job_ids:
                 return []
 
-            jobs: List[schemas.JobInfo] = await aiometer.run_all(
+            jobs: list[schemas.JobInfo] = await aiometer.run_all(
                 [
                     functools.partial(self.get_job_by_id, job_id, redis)
                     for job_id in job_ids
                 ],
-                max_at_once=settings.MAX_AT_ONCE,
-                max_per_second=settings.MAX_PER_SECONDS,
+                max_at_once=settings.max_at_once,
+                max_per_second=settings.max_per_seconds,
             )
 
         dummy_enqueue_time = datetime.min
@@ -105,26 +98,26 @@ class Queue:
         async with get_redis(self.redis_settings) as redis:
             job_ids = await get_job_ids(redis, self.name)
 
-            statuses: List[JobStatus] = []
-            if len(job_ids) > 0:
+            statuses: list[JobStatus] = []
+            if job_ids:
                 statuses = await aiometer.run_all(
                     [
                         functools.partial(self._get_job_status, redis, job_id)
                         for job_id in job_ids
                     ],
-                    max_at_once=settings.MAX_AT_ONCE,
-                    max_per_second=settings.MAX_PER_SECONDS,
+                    max_at_once=settings.max_at_once,
+                    max_per_second=settings.max_per_seconds,
                 )
 
-        job_counts: Dict[JobStatus, int] = {
+        job_counts: dict[JobStatus, int] = {
             JobStatus.queued: 0,
             JobStatus.in_progress: 0,
             JobStatus.deferred: 0,
             JobStatus.complete: 0,
             JobStatus.not_found: 0,
         }
-        for status in statuses:
-            job_counts[status] += 1
+        for s in statuses:
+            job_counts[s] += 1
 
         return schemas.QueueStats(
             name=self.name,
@@ -139,28 +132,25 @@ class Queue:
         )
 
     async def get_job_by_id(
-        self, job_id: str, redis: Optional[ArqRedis] = None
+        self, job_id: str, redis: ArqRedis | None = None
     ) -> schemas.JobInfo:
         if redis is None:
             async with get_redis(self.redis_settings) as redis:
                 return await self._get_job_by_id(redis, job_id)
-
         return await self._get_job_by_id(redis, job_id)
 
     async def _get_job_by_id(
-        self,
-        redis: ArqRedis,
-        job_id: str,
+        self, redis: ArqRedis, job_id: str
     ) -> schemas.JobInfo:
         arq_job = ArqJob(
             job_id=job_id,
             redis=redis,
             _queue_name=self.name,
-            _deserializer=settings.ARQ_DESERIALIZER,
+            _deserializer=settings.arq_deserializer,
         )
 
         unknown_function_msg = "unknown"
-        base_info: Optional[Union[schemas.JobDef, JobDef]] = None
+        base_info: JobDef | schemas.JobDef | None = None
 
         try:
             base_info = await arq_job.info()
@@ -177,19 +167,14 @@ class Queue:
 
         job_info = schemas.JobInfo.from_base(base_info, job_id)
         job_info.status = await arq_job.status()
-
         return job_info
 
-    async def _get_job_status(
-        self,
-        redis: ArqRedis,
-        job_id: str,
-    ) -> JobStatus:
+    async def _get_job_status(self, redis: ArqRedis, job_id: str) -> JobStatus:
         arq_job = ArqJob(
             job_id=job_id,
             redis=redis,
             _queue_name=self.name,
-            _deserializer=settings.ARQ_DESERIALIZER,
+            _deserializer=settings.arq_deserializer,
         )
         return await arq_job.status()
 
@@ -198,5 +183,4 @@ class Queue:
     ):
         if status == await self._get_job_status(redis, job_id):
             return job_id
-
         return None

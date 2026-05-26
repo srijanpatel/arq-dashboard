@@ -1,4 +1,3 @@
-from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,13 +11,13 @@ from .settings import REDIS_SETTINGS
 
 
 @pytest.mark.asyncio
-async def test_all_get_jobs(all_jobs: List[Job]) -> None:
+async def test_all_get_jobs(all_jobs: list[Job]) -> None:
     queue = Queue(default_queue_name, REDIS_SETTINGS)
     assert len(await queue.get_jobs()) == 4
 
 
 @pytest.mark.asyncio
-async def test_status_filter(all_jobs: List[Job]) -> None:
+async def test_status_filter(all_jobs: list[Job]) -> None:
     queue = Queue(default_queue_name, REDIS_SETTINGS)
     assert len(await queue.get_jobs(JobStatus.deferred)) == 1
     assert len(await queue.get_jobs(JobStatus.in_progress)) == 1
@@ -27,7 +26,7 @@ async def test_status_filter(all_jobs: List[Job]) -> None:
 
 
 @pytest.mark.asyncio
-async def test_stats(all_jobs: List[Job]) -> None:
+async def test_stats(all_jobs: list[Job]) -> None:
     queue = Queue(default_queue_name, REDIS_SETTINGS)
     stats = await queue.get_stats()
 

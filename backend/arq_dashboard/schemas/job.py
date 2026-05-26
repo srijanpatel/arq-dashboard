@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from arq.jobs import JobDef as ArqJobDef
 from arq.jobs import JobResult, JobStatus
@@ -10,27 +10,25 @@ from .mixins import CachedAtMixin, PaginationMixin
 
 class JobDef(APIModel):
     function: str
-    args: Tuple[Any, ...]
-    kwargs: Dict[str, Any]
-    job_try: Optional[int]
-    enqueue_time: Optional[datetime]
-    score: Optional[int]
+    args: tuple[Any, ...]
+    kwargs: dict[str, Any]
+    job_try: int | None
+    enqueue_time: datetime | None = None
+    score: int | None = None
 
 
 class JobInfo(JobDef):
     job_id: str
     success: bool = False
-
-    queue_name: Optional[str] = None
-    result: Optional[Any] = None
-    start_time: Optional[datetime] = None
-    finish_time: Optional[datetime] = None
-
+    queue_name: str | None = None
+    result: Any | None = None
+    start_time: datetime | None = None
+    finish_time: datetime | None = None
     status: JobStatus = JobStatus.queued
 
     @classmethod
     def from_base(
-        cls, base_info: Union[ArqJobDef, JobDef, JobResult], job_id: str
+        cls, base_info: ArqJobDef | JobDef | JobResult, job_id: str
     ) -> "JobInfo":
         obj = cls(
             job_id=job_id,
@@ -57,4 +55,4 @@ class CachedJobInfo(CachedAtMixin, JobInfo, APIModel):
 
 
 class JobsWithPagination(CachedAtMixin, PaginationMixin, APIModel):
-    jobs: List[JobInfo]
+    jobs: list[JobInfo]

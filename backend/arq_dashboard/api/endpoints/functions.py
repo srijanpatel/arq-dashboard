@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends
 
@@ -9,9 +9,9 @@ from arq_dashboard.utils import Metadata, get_metadata
 router = APIRouter()
 
 
-@router.get("/", response_model=List[schemas.Function])
+@router.get("/", response_model=list[schemas.Function])
 async def get_functions(
     queue_name: str = Depends(get_queue_name),
-) -> List[schemas.Function]:
+) -> list[schemas.Function]:
     metadata = cast(Metadata, await get_metadata(queue_name))
     return [schemas.Function(name=name) for name in metadata.functions]

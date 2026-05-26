@@ -1,7 +1,8 @@
 import asyncio
+from collections.abc import AsyncGenerator, Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Callable, List, Optional, Sequence, Union
+from typing import Any
 
 import pytest_asyncio
 from arq import ArqRedis, Worker
@@ -9,7 +10,7 @@ from arq.constants import default_queue_name, job_key_prefix
 from arq.jobs import Job, JobStatus
 from arq.typing import WorkerCoroutine
 from arq.worker import Function
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from pytest_mock import MockerFixture
 
 from arq_dashboard import create_app
@@ -28,11 +29,11 @@ async def redis() -> AsyncGenerator[ArqRedis, None]:
 @pytest_asyncio.fixture
 async def create_worker(
     redis: ArqRedis,
-) -> AsyncGenerator[Callable[[Any], Worker], None]:
-    worker: Optional[Worker] = None
+) -> AsyncGenerator[Callable[..., Worker], None]:
+    worker: Worker | None = None
 
     def create(
-        functions: Sequence[Union[Function, WorkerCoroutine]], **kwargs: Any
+        functions: Sequence[Function | WorkerCoroutine], **kwargs: Any
     ) -> Worker:
         nonlocal worker
         worker = Worker(
@@ -81,7 +82,6 @@ class JobsCreator:
         job = await self.redis.enqueue_job("successful_task", _job_id="finished_task")
         assert job
         await self.worker.main()
-
         return job
 
     async def create_running(self) -> Job:
@@ -116,7 +116,7 @@ async def jobs_creator(redis: ArqRedis, create_worker: Any) -> JobsCreator:
 
 
 @pytest_asyncio.fixture
-async def all_jobs(jobs_creator: JobsCreator) -> List[Job]:
+async def all_jobs(jobs_creator: JobsCreator) -> list[Job]:
     while True:
         finished_job = await jobs_creator.create_finished()
         running_job = await jobs_creator.create_running()
@@ -144,7 +144,9 @@ async def unserializable_job(jobs_creator: JobsCreator) -> Job:
 @pytest_asyncio.fixture
 async def client(mocker: MockerFixture):
     queues = {default_queue_name: REDIS_SETTINGS}
-    mocker.patch("arq_dashboard.queue.settings.ARQ_QUEUES", queues)
+    mocker.patch("arq_dashboard.core.settings.settings.arq_queues", queues, create=True)
 
     app = create_app()
-    return TestClient(app)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
