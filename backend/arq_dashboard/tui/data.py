@@ -4,6 +4,7 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from arq.constants import default_queue_name
 from arq.jobs import JobStatus
@@ -33,6 +34,14 @@ class JobRow:
     queue_name: str
     enqueue_time: str
     runtime_ms: float | None
+    # Detail fields (used by JobDetailScreen)
+    enqueue_time_dt: datetime | None = None
+    start_time_dt: datetime | None = None
+    finish_time_dt: datetime | None = None
+    args: tuple[Any, ...] = ()
+    kwargs: dict[str, Any] = field(default_factory=dict)
+    result: Any = None
+    job_try: int | None = None
 
 
 @dataclass
@@ -103,7 +112,7 @@ async def fetch_all_data() -> DashboardData:
 
         data.jobs.append(
             JobRow(
-                job_id=job.job_id[:12],
+                job_id=job.job_id,
                 function=job.function,
                 status=str(job.status.value)
                 if hasattr(job.status, "value")
@@ -112,6 +121,13 @@ async def fetch_all_data() -> DashboardData:
                 queue_name=job.queue_name or "—",
                 enqueue_time=_fmt_time(job.enqueue_time),
                 runtime_ms=runtime_ms,
+                enqueue_time_dt=job.enqueue_time,
+                start_time_dt=job.start_time,
+                finish_time_dt=job.finish_time,
+                args=job.args,
+                kwargs=job.kwargs,
+                result=job.result,
+                job_try=job.job_try,
             )
         )
 
@@ -171,6 +187,13 @@ async def fetch_all_data() -> DashboardData:
     return data
 
 
+_MOCK_NOW = datetime(2026, 5, 26, 19, 42, 15, tzinfo=UTC)
+
+
+def _mock_dt(ms_ago: int) -> datetime:
+    return _MOCK_NOW - timedelta(milliseconds=ms_ago)
+
+
 def mock_data() -> DashboardData:
     """Return realistic mock data for screenshots."""
     return DashboardData(
@@ -199,22 +222,36 @@ def mock_data() -> DashboardData:
         ],
         jobs=[
             JobRow(
-                "e7d3e8f5bb06",
-                "send_notification",
-                "complete",
-                True,
-                "arq:queue",
-                "19:41:52",
-                210.5,
+                job_id="e7d3e8f5bb064035ba71d6cfda0167d4",
+                function="send_notification",
+                status="complete",
+                success=True,
+                queue_name="arq:queue",
+                enqueue_time="19:41:52",
+                runtime_ms=210.5,
+                enqueue_time_dt=_mock_dt(23800),
+                start_time_dt=_mock_dt(23420),
+                finish_time_dt=_mock_dt(23210),
+                args=("user_4012", "order.shipped"),
+                kwargs={"channel": "email", "priority": "normal"},
+                result={"sent": True, "message_id": "msg_8a3f"},
+                job_try=1,
             ),
             JobRow(
-                "a1604834e6df",
-                "process_payment",
-                "complete",
-                True,
-                "arq:queue",
-                "19:41:44",
-                1823.0,
+                job_id="a1604834e6df46f58c9cf1158baedfd9",
+                function="process_payment",
+                status="complete",
+                success=True,
+                queue_name="arq:queue",
+                enqueue_time="19:41:44",
+                runtime_ms=1823.0,
+                enqueue_time_dt=_mock_dt(31200),
+                start_time_dt=_mock_dt(30400),
+                finish_time_dt=_mock_dt(28577),
+                args=("usr_1042", "ord_88291"),
+                kwargs={"currency": "USD", "amount": 49.99, "retry": False},
+                result={"transactionId": "txn_9f8a7b6c", "status": "settled"},
+                job_try=1,
             ),
             JobRow(
                 "9011598986d0",

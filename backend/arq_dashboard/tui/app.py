@@ -1,9 +1,12 @@
 import contextlib
+import json
+from datetime import datetime
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, ScrollableContainer
 from textual.design import ColorSystem
+from textual.screen import ModalScreen
 from textual.timer import Timer
 from textual.widgets import (
     DataTable,
@@ -15,7 +18,7 @@ from textual.widgets import (
     TabPane,
 )
 
-from arq_dashboard.tui.data import DashboardData, fetch_all_data
+from arq_dashboard.tui.data import DashboardData, JobRow, fetch_all_data
 
 WARM_DARK = ColorSystem(
     primary="#E09050",
@@ -62,6 +65,30 @@ def _bar(fraction: float, width: int = 15) -> str:
     """Render a text-based progress bar."""
     filled = int(fraction * width)
     return "█" * filled + "░" * (width - filled)
+
+
+def _duration_between(a: datetime | None, b: datetime | None) -> str:
+    if a is None or b is None:
+        return "—"
+    return _fmt_ms((b - a).total_seconds() * 1000)
+
+
+def _fmt_dt(dt: datetime | None) -> str:
+    if dt is None:
+        return "—"
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _pretty(value) -> str:
+    """Best-effort JSON formatting of args/kwargs/result."""
+    if value is None:
+        return "null"
+    if isinstance(value, tuple):
+        value = list(value)
+    try:
+        return json.dumps(value, indent=2, default=str)
+    except (TypeError, ValueError):
+        return repr(value)
 
 
 class StatRow(Static):
@@ -113,6 +140,143 @@ class StatRow(Static):
     def update_item(self, id_suffix: str, value: str):
         with contextlib.suppress(Exception):
             self.query_one(f"#sv-{id_suffix}", Label).update(value)
+
+
+class JobDetailScreen(ModalScreen):
+    """Modal showing full details for a single job."""
+
+    CSS = """
+    JobDetailScreen {
+        align: center middle;
+    }
+
+    #detail-box {
+        width: 90%;
+        max-width: 100;
+        height: 90%;
+        background: $surface;
+        border: round $accent;
+        padding: 1 2;
+    }
+
+    #detail-box .detail-title {
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 1;
+    }
+
+    #detail-box .field-label {
+        color: $text-muted;
+        text-style: bold;
+        margin: 1 0 0 0;
+    }
+
+    #detail-box .field-value {
+        margin: 0 0 1 1;
+    }
+
+    #detail-box .code-block {
+        background: $panel;
+        padding: 1 2;
+        margin: 0 0 1 1;
+        border-left: thick $accent;
+    }
+
+    #detail-tags {
+        height: auto;
+        margin-bottom: 1;
+    }
+
+    #detail-tags .tag {
+        background: $panel;
+        padding: 0 1;
+        margin-right: 1;
+    }
+
+    #timeline-row {
+        height: auto;
+        margin: 1 0;
+    }
+
+    .timeline-step {
+        width: 1fr;
+        height: auto;
+        content-align: center top;
+        text-align: center;
+    }
+
+    .timeline-dot {
+        color: $accent;
+        text-style: bold;
+        text-align: center;
+    }
+
+    .timeline-arrow {
+        width: auto;
+        color: $text-muted;
+        content-align: center middle;
+        padding: 0 1;
+    }
+    """
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("q", "dismiss", "Close"),
+    ]
+
+    def __init__(self, job: JobRow):
+        super().__init__()
+        self._job = job
+
+    def compose(self) -> ComposeResult:
+        job = self._job
+        success_tag = "✓ success" if job.success else "✗ failure"
+
+        with ScrollableContainer(id="detail-box"):
+            yield Label(f"Job  {job.job_id}", classes="detail-title")
+
+            with Horizontal(id="detail-tags"):
+                yield Label(f" {job.status} ", classes="tag")
+                yield Label(f" {success_tag} ", classes="tag")
+                if job.job_try is not None and job.job_try > 1:
+                    yield Label(f" try #{job.job_try} ", classes="tag")
+
+            wait = _duration_between(job.enqueue_time_dt, job.start_time_dt)
+            run = _duration_between(job.start_time_dt, job.finish_time_dt)
+
+            yield Label("TIMELINE", classes="field-label")
+            with Horizontal(id="timeline-row"):
+                yield Static(
+                    f"● Enqueued\n{_fmt_dt(job.enqueue_time_dt)}",
+                    classes="timeline-step",
+                )
+                yield Label(f"── {wait} wait ──", classes="timeline-arrow")
+                yield Static(
+                    f"● Started\n{_fmt_dt(job.start_time_dt)}",
+                    classes="timeline-step",
+                )
+                yield Label(f"── {run} runtime ──", classes="timeline-arrow")
+                yield Static(
+                    f"● Finished\n{_fmt_dt(job.finish_time_dt)}",
+                    classes="timeline-step",
+                )
+
+            yield Label("FUNCTION", classes="field-label")
+            yield Label(job.function, classes="field-value")
+
+            yield Label("QUEUE", classes="field-label")
+            yield Label(job.queue_name, classes="field-value")
+
+            yield Label("ARGS", classes="field-label")
+            yield Static(_pretty(job.args), classes="code-block")
+
+            yield Label("KWARGS", classes="field-label")
+            yield Static(_pretty(job.kwargs), classes="code-block")
+
+            yield Label("RESULT", classes="field-label")
+            yield Static(_pretty(job.result), classes="code-block")
+
+            yield Label("[dim]Press Esc to close[/dim]")
 
 
 class ArqDashboardTUI(App):
@@ -228,6 +392,13 @@ class ArqDashboardTUI(App):
         await self.action_refresh()
         self._refresh_timer = self.set_interval(15, self.action_refresh)
 
+    async def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        if event.data_table.id != "jobs-table" or not self._data:
+            return
+        row_index = event.cursor_row
+        if 0 <= row_index < len(self._data.jobs):
+            self.push_screen(JobDetailScreen(self._data.jobs[row_index]))
+
     def action_tab_stats(self):
         with contextlib.suppress(Exception):
             self.query_one(TabbedContent).active = "stats-pane"
@@ -243,7 +414,7 @@ class ArqDashboardTUI(App):
             self._render_data()
             self._update_status(
                 f"Updated {self._data.cached_at}  •  "
-                f"r=refresh  d=theme  1=stats  2=jobs  q=quit"
+                f"r=refresh  d=theme  1=stats  2=jobs  ↵=details  q=quit"
             )
         except Exception as e:
             self._update_status(f"Error: {e}")
@@ -291,7 +462,7 @@ class ArqDashboardTUI(App):
         for job in d.jobs:
             runtime = _fmt_ms(job.runtime_ms) if job.runtime_ms else "—"
             jobs_table.add_row(
-                job.job_id,
+                job.job_id[:12],
                 job.function,
                 job.status,
                 "✓" if job.success else "✗",

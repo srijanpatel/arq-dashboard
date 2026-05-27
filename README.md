@@ -44,6 +44,8 @@ docker run --rm -it \
 
 ![TUI — Jobs](screenshots/tui-jobs.svg)
 
+![TUI — Job Detail](screenshots/tui-job-detail.svg)
+
 ## Configuration
 
 | Variable | Default | Description |
