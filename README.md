@@ -4,36 +4,22 @@ A monitoring dashboard for [ARQ](https://github.com/samuelcolvin/arq) (async Red
 
 ## Quick start
 
-If Redis is running on your host machine:
-
 ```bash
-docker run --rm -p 8000:8000 \
-  --add-host=host.docker.internal:host-gateway \
-  -e ARQ_DASHBOARD_REDIS_URL=redis://host.docker.internal:6379 \
+docker run --rm --network host \
+  -e ARQ_DASHBOARD_REDIS_URL=redis://localhost:6379 \
   ghcr.io/srijanpatel/arq-dashboard:latest
 ```
 
 Open `http://localhost:8000`. Or launch the TUI:
 
 ```bash
-docker run --rm -it \
-  --add-host=host.docker.internal:host-gateway \
-  -e ARQ_DASHBOARD_REDIS_URL=redis://host.docker.internal:6379 \
+docker run --rm -it --network host \
+  -e ARQ_DASHBOARD_REDIS_URL=redis://localhost:6379 \
   ghcr.io/srijanpatel/arq-dashboard tui
 ```
 
-> **Why `host.docker.internal`?** Inside the container, `localhost` refers
-> to the container itself, not your host. `host.docker.internal` resolves
-> to the host's IP. The `--add-host` flag is required on Linux; on Docker
-> Desktop (Mac/Windows) it's enabled by default.
-
-If your Redis is remote, just point at it directly:
-
-```bash
-docker run --rm -p 8000:8000 \
-  -e ARQ_DASHBOARD_REDIS_URL=redis://redis.internal.example.com:6379 \
-  ghcr.io/srijanpatel/arq-dashboard:latest
-```
+> `--network host` is native on Linux. On Docker Desktop (Mac/Windows)
+> enable it in Settings → Resources → Network → "Enable host networking".
 
 ![Stats — Light](screenshots/stats-light.png)
 
