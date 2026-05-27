@@ -14,6 +14,7 @@ from httpx import ASGITransport, AsyncClient
 from pytest_mock import MockerFixture
 
 from arq_dashboard import create_app
+from arq_dashboard.core.settings import settings
 from arq_dashboard.dependencies import get_redis
 
 from .settings import REDIS_SETTINGS
@@ -144,7 +145,9 @@ async def unserializable_job(jobs_creator: JobsCreator) -> Job:
 @pytest_asyncio.fixture
 async def client(mocker: MockerFixture):
     queues = {default_queue_name: REDIS_SETTINGS}
-    mocker.patch("arq_dashboard.core.settings.settings.arq_queues", queues, create=True)
+    mocker.patch.object(
+        type(settings), "arq_queues", new_callable=lambda: property(lambda self: queues)
+    )
 
     app = create_app()
     transport = ASGITransport(app=app)
