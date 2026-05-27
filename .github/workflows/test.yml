@@ -1,4 +1,4 @@
-name: Python CI
+name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
 
     services:
@@ -21,26 +21,47 @@ jobs:
         ports:
           - 6379:6379
 
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10"]
-        poetry-version: [1.1.13]
+    defaults:
+      run:
+        working-directory: backend
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup python
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type check
+        run: uv run ruff format --check .
+
+      - name: Test
+        run: uv run pytest tests/ -v
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          node-version: 22
 
-      - name: Run image
-        uses: abatilo/actions-poetry@v2.0.0
-        with:
-          poetry-version: ${{ matrix.poetry-version }}
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Install
-        run: |
-          poetry install
+      - name: Type check
+        run: npx vue-tsc --noEmit
 
-      - name: Run tests
-        run: poetry run pytest --cov=arq_dashboard
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npx vite build
